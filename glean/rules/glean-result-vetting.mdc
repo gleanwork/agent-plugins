@@ -1,0 +1,22 @@
+---
+description: Always-active rule enforcing quality vetting of Glean search results before presenting to users
+alwaysApply: true
+---
+
+# Glean Result Vetting
+
+When presenting results from Glean MCP tools, always vet before showing:
+
+**Relevance**: Does this actually answer the question, or just contain matching keywords? Reject keyword coincidences.
+
+**Freshness**: Is this current?
+- ✅ <6 months: include with confidence
+- ⚠️ 6-12 months: include with staleness note
+- ❌ 12+ months: exclude unless no alternatives (with strong warning)
+
+**Authority**: How reliable is the source?
+- Official (RFCs, approved specs) > Semi-official (team wikis) > Informal (Slack, personal notes)
+
+**Quality over quantity**: 3 vetted results beats 10 unvetted mentions. "Nothing relevant found" is a valid and useful answer — never pad with weak results.
+
+Always include: document title, URL, last updated date, and confidence level when presenting Glean results.

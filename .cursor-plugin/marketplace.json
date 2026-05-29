@@ -1,0 +1,26 @@
+{
+  "name": "glean-plugins",
+  "owner": {
+    "name": "Glean",
+    "email": "steve.calvert@glean.com"
+  },
+  "metadata": {
+    "description": "Official Glean plugin for Cursor — enterprise knowledge, code search, and people discovery.",
+    "keywords": [
+      "glean",
+      "enterprise-search",
+      "knowledge-management",
+      "productivity",
+      "workplace",
+      "mcp"
+    ]
+  },
+  "plugins": [
+    {
+      "name": "glean",
+      "source": "glean",
+      "description": "Official Glean plugin for Cursor — enterprise search, code exploration, and people discovery."
+    }
+  ],
+  "version": "2.1.1"
+}

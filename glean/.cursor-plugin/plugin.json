@@ -1,0 +1,39 @@
+{
+  "name": "glean",
+  "displayName": "Glean",
+  "version": "2.1.1",
+  "description": "Official Glean plugin for Cursor — search documents, Slack, and email; explore code across repos; and find experts and stakeholders.",
+  "author": {
+    "name": "Glean",
+    "email": "steve.calvert@glean.com"
+  },
+  "homepage": "https://docs.glean.com/administration/platform/mcp/about",
+  "repository": "https://github.com/gleanwork/cursor-plugins",
+  "license": "MIT",
+  "logo": "assets/avatar.svg",
+  "keywords": [
+    "glean",
+    "enterprise-search",
+    "knowledge-management",
+    "productivity",
+    "workplace",
+    "code-search",
+    "people-search",
+    "mcp"
+  ],
+  "category": "productivity",
+  "tags": [
+    "mcp",
+    "enterprise",
+    "search",
+    "documents",
+    "slack",
+    "code",
+    "people",
+    "experts",
+    "org"
+  ],
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "rules": "./rules/"
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@gleanwork/agent-plugins",
+  "version": "2.1.1",
+  "description": "Official Glean agent plugins for AI coding tools.",
+  "license": "MIT",
+  "author": {
+    "name": "Glean",
+    "email": "support@glean.com",
+    "url": "https://glean.com"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "pluginpack build",
+    "clean": "pluginpack clean",
+    "diff:claude": "pluginpack diff --target claude --against ../pluginpack-source-snapshots/claude-plugins",
+    "diff:cursor": "pluginpack diff --target cursor --against ../pluginpack-source-snapshots/cursor-plugins",
+    "prune": "pluginpack prune",
+    "test": "npm run build && npm run diff:claude && npm run diff:cursor",
+    "validate": "pluginpack validate --target claude --dir . && pluginpack validate --target cursor --dir ."
+  },
+  "devDependencies": {
+    "@gleanwork/pluginpack": "file:../pluginpack"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
