@@ -12,10 +12,10 @@
   "scripts": {
     "build": "pluginpack build",
     "clean": "pluginpack clean",
-    "diff:claude": "pluginpack diff --target claude --against ../pluginpack-source-snapshots/claude-plugins",
-    "diff:cursor": "pluginpack diff --target cursor --against ../pluginpack-source-snapshots/cursor-plugins",
+    "diff:claude": "pluginpack diff --target claude --against .",
+    "diff:cursor": "pluginpack diff --target cursor --against .",
     "prune": "pluginpack prune",
-    "test": "npm run build && npm run diff:claude && npm run diff:cursor",
+    "test": "npm run diff:claude && npm run diff:cursor",
     "validate": "pluginpack validate --target claude --dir . && pluginpack validate --target cursor --dir ."
   },
   "devDependencies": {

@@ -8,7 +8,7 @@
     "url": "https://glean.com"
   },
   "homepage": "https://developers.glean.com",
-  "repository": "https://github.com/gleanwork/claude-plugins",
+  "repository": "https://github.com/gleanwork/agent-plugins",
   "license": "MIT",
   "keywords": [
     "glean",

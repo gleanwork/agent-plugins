@@ -1,0 +1,12 @@
+{
+  "description": "Access Glean's developer documentation - search API references, SDK guides, and integration tutorials via the Glean Developer Docs MCP Server.",
+  "keywords": [
+    "glean",
+    "mcp",
+    "developer-docs",
+    "api",
+    "sdk",
+    "documentation"
+  ],
+  "homepage": "https://developers.glean.com"
+}

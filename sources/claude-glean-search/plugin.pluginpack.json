@@ -1,0 +1,11 @@
+{
+  "description": "Enterprise search across documents, Slack, email, and other sources via Glean. Requires glean-core.",
+  "keywords": [
+    "glean",
+    "mcp",
+    "enterprise-search",
+    "documents",
+    "slack",
+    "email"
+  ]
+}

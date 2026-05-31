@@ -1,0 +1,11 @@
+{
+  "description": "Project handoff documents - generate comprehensive handoff docs when transitioning project ownership via Glean. Requires glean-core.",
+  "keywords": [
+    "glean",
+    "mcp",
+    "project",
+    "context",
+    "handoff",
+    "documentation"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "description": "Core Glean MCP integration - provides shared skills, tool guidance, and MCP configuration. Required foundation for all other Glean plugins.",
+  "keywords": [
+    "glean",
+    "mcp",
+    "enterprise-search",
+    "core",
+    "foundation"
+  ]
+}

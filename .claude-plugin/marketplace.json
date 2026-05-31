@@ -11,52 +11,52 @@
     {
       "name": "glean-core",
       "source": "./plugins/glean-core",
-      "description": "Core Glean MCP integration - shared skills, tool guidance, and configuration. Required foundation for all other Glean plugins."
+      "description": "Core Glean MCP integration - provides shared skills, tool guidance, and MCP configuration. Required foundation for all other Glean plugins."
     },
     {
       "name": "glean-search",
       "source": "./plugins/glean-search",
-      "description": "Enterprise search across documents, Slack, email, and other sources via Glean."
+      "description": "Enterprise search across documents, Slack, email, and other sources via Glean. Requires glean-core."
     },
     {
       "name": "glean-people",
       "source": "./plugins/glean-people",
-      "description": "Find experts, understand org structure, and identify stakeholders via Glean."
+      "description": "Find experts, understand org structure, and identify stakeholders via Glean. Requires glean-core."
     },
     {
       "name": "glean-meetings",
       "source": "./plugins/glean-meetings",
-      "description": "Meeting intelligence - analyze transcripts, prepare for meetings, and catch up after time off."
+      "description": "Meeting intelligence - analyze transcripts, prepare for meetings, and catch up after time off via Glean. Requires glean-core."
     },
     {
       "name": "glean-docs",
       "source": "./plugins/glean-docs",
-      "description": "Document intelligence - analyze docs, verify specs, and onboard to new areas."
+      "description": "Document intelligence - analyze docs, verify specs against implementation, and onboard to new areas via Glean. Requires glean-core."
     },
     {
       "name": "glean-code",
       "source": "./plugins/glean-code",
-      "description": "Cross-repository code exploration - search code across your org, find examples, and discover similar implementations."
+      "description": "Cross-repository code exploration - search code across your org, find examples, identify code owners, and discover similar implementations via Glean. Requires glean-core."
     },
     {
       "name": "glean-dev-docs",
       "source": "./plugins/glean-dev-docs",
-      "description": "Access Glean's developer documentation - search API references, SDK guides, and integration tutorials."
+      "description": "Access Glean's developer documentation - search API references, SDK guides, and integration tutorials via the Glean Developer Docs MCP Server."
     },
     {
       "name": "glean-skills",
       "source": "./plugins/glean-skills",
-      "description": "Discover and create Claude Code skills from work patterns."
+      "description": "Discover and create Claude Code skills from Glean work patterns"
     },
     {
       "name": "glean-productivity",
       "source": "./plugins/glean-productivity",
-      "description": "Personal productivity - daily briefings, weekly summaries, and activity analysis via Glean."
+      "description": "Personal productivity tools - daily briefings, weekly summaries, and activity analysis via Glean. Requires glean-core."
     },
     {
       "name": "glean-project",
       "source": "./plugins/glean-project",
-      "description": "Project intelligence - generate comprehensive handoff documents when transitioning ownership."
+      "description": "Project handoff documents - generate comprehensive handoff docs when transitioning project ownership via Glean. Requires glean-core."
     }
   ]
 }

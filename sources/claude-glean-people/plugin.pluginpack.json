@@ -1,0 +1,11 @@
+{
+  "description": "Find experts, understand org structure, and identify stakeholders via Glean. Requires glean-core.",
+  "keywords": [
+    "glean",
+    "mcp",
+    "people",
+    "experts",
+    "org-chart",
+    "stakeholders"
+  ]
+}

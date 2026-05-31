@@ -19,7 +19,7 @@
     {
       "name": "glean",
       "source": "glean",
-      "description": "Official Glean plugin for Cursor — enterprise search, code exploration, and people discovery."
+      "description": "Official Glean plugin for Cursor — search documents, Slack, and email; explore code across repos; and find experts and stakeholders."
     }
   ],
   "version": "2.1.1"

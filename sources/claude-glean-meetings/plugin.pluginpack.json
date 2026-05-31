@@ -1,0 +1,11 @@
+{
+  "description": "Meeting intelligence - analyze transcripts, prepare for meetings, and catch up after time off via Glean. Requires glean-core.",
+  "keywords": [
+    "glean",
+    "mcp",
+    "meetings",
+    "transcripts",
+    "calendar",
+    "catch-up"
+  ]
+}
