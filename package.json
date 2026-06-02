@@ -19,7 +19,7 @@
     "validate": "pluginpack validate --target claude --dir . && pluginpack validate --target cursor --dir ."
   },
   "devDependencies": {
-    "@gleanwork/pluginpack": "file:../pluginpack"
+    "@gleanwork/pluginpack": "^0.5.0"
   },
   "engines": {
     "node": ">=24"
