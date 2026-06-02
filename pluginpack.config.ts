@@ -33,14 +33,14 @@ export default defineConfig({
       plugins: {
         glean: {
           from: ["glean-lib", "shared", "claude"],
-          components: ["skills", "agents", "commands", "hooks"],
+          components: ["skills", "agents", "hooks"],
           displayName: "Glean",
           description:
             "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
         },
         "glean-dev-docs": {
           from: ["dev-docs"],
-          components: ["skills", "commands"],
+          components: ["skills"],
           displayName: "Glean Developer Docs",
           description:
             "Search the public Glean developer documentation — APIs, SDKs, MCP, and integration guides for building with Glean.",
@@ -60,7 +60,7 @@ export default defineConfig({
       plugins: {
         glean: {
           from: ["glean-lib", "shared", "cursor"],
-          components: ["skills", "agents", "rules", "commands", "assets"],
+          components: ["skills", "agents", "rules", "assets"],
           displayName: "Glean",
           description:
             "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",

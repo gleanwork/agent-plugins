@@ -90,7 +90,7 @@ Found [X] results, showing top [Y] most relevant:
 
 ### Glean MCP Not Connected
 If you see errors about missing Glean MCP tools:
-- See the mcp-setup skill or your host's Glean MCP setup documentation to configure a connection
+- See your host's Glean MCP setup documentation to configure a connection
 
 ### No Results Found
 If search returns no results:

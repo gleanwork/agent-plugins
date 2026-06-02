@@ -154,7 +154,7 @@ This change appears to have limited stakeholder impact.
 ## Troubleshooting
 
 ### Glean Tools Unavailable
-If Glean tools are unavailable, the Glean MCP server isn't connected for this host — point the user at their host's Glean MCP setup (see the mcp-setup skill).
+If Glean tools are unavailable, the Glean MCP server isn't connected for this host — point the user at their host's Glean MCP setup.
 
 ### Too Many Stakeholders
 If too many people appear relevant:

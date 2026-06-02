@@ -13,7 +13,7 @@ The tools listed below come from the user's Glean MCP server connection. Refer t
 
 In the raw MCP tool list, Glean tools appear as `mcp__glean_[server-name]__[tool]` where `[server-name]` is the user's configured server identifier (e.g., `default`, `production`, `acme`). The tool suffix after the final `__` is always consistent across deployments. Use whatever Glean server is visible in your tool inventory.
 
-If no Glean tools are visible, the user hasn't configured a Glean MCP server for this host. Point them at the Glean MCP setup for their host (see the `mcp-setup` skill).
+If no Glean tools are visible, the user hasn't configured a Glean MCP server for this host. Point them at the Glean MCP setup for their host.
 
 ## Intent → tool decision tree
 

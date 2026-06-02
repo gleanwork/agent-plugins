@@ -37,6 +37,5 @@
   "skills": "./skills/",
   "agents": "./agents/",
   "rules": "./rules/",
-  "commands": "./commands/",
   "assets": "./assets/"
 }

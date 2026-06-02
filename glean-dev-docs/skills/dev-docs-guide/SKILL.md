@@ -14,7 +14,7 @@ This skill uses two tools (refer to them by their bare names):
 - `docs_search` — search across the public Glean developer documentation
 - `docs_fetch` — get the full content of a documentation page by URL
 
-If these tools aren't visible in the active inventory, the user hasn't configured the Glean Dev Docs MCP server for this host — point them at their host's Glean Dev Docs MCP setup (see the setup command).
+If these tools aren't visible in the active inventory, the user hasn't configured the Glean Dev Docs MCP server for this host — point them at their host's Glean Dev Docs MCP setup.
 
 ## When to use
 
