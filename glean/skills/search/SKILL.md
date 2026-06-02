@@ -1,7 +1,6 @@
 ---
 name: search
-description: Perform a structured Glean search with result vetting and quality assessment.
-  Use when the user explicitly requests a Glean search and wants formatted results with freshness and authority indicators.
+description: Search Glean enterprise knowledge - use for find the doc about, search for, where is, look up, search company knowledge, search Glean for; returns vetted results with freshness and authority indicators. For broader enterprise queries needing synthesis across multiple tools, prefer the using-glean skill instead.
 ---
 
 # Structured Glean Search
@@ -18,7 +17,7 @@ Perform a structured search across Glean enterprise knowledge and return vetted,
 
 ### 1. Identify the Query
 
-Gather the search topic from the user's request or current conversation context.
+Determine the search topic from the user's request or current conversation context. If no query is apparent, ask the user what they want to search for before proceeding.
 
 ### 2. Execute Search
 
@@ -56,9 +55,9 @@ After results, include:
 
 ### 6. Offer Follow-up Actions
 
-After showing results, offer next steps:
+After showing results, offer these follow-up actions:
 - Read a document in full
-- Refine search with filters
+- Refine the search with filters (by date, owner, app/source, or different keywords)
 - Search a related topic
 
 ## Example Output
@@ -90,9 +89,8 @@ Found [X] results, showing top [Y] most relevant:
 ## Troubleshooting
 
 ### Glean MCP Not Connected
-If you see errors about missing `mcp__glean` tools:
-- Check `~/.cursor/mcp.json` for a Glean server entry
-- Use the mcp-setup skill to configure a connection
+If you see errors about missing Glean MCP tools:
+- See the mcp-setup skill or your host's Glean MCP setup documentation to configure a connection
 
 ### No Results Found
 If search returns no results:

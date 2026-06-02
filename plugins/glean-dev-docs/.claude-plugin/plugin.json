@@ -1,21 +1,13 @@
 {
   "name": "glean-dev-docs",
-  "version": "2.0.0",
-  "description": "Access Glean's developer documentation - search API references, SDK guides, and integration tutorials via the Glean Developer Docs MCP Server.",
+  "version": "2.2.0",
+  "description": "Search the public Glean developer documentation — APIs, SDKs, MCP, and integration guides for building with Glean.",
   "author": {
     "name": "Glean",
     "email": "steve.calvert@glean.com",
     "url": "https://glean.com"
   },
-  "homepage": "https://developers.glean.com",
+  "homepage": "https://docs.glean.com/administration/platform/mcp/about",
   "repository": "https://github.com/gleanwork/agent-plugins",
-  "license": "MIT",
-  "keywords": [
-    "glean",
-    "mcp",
-    "developer-docs",
-    "api",
-    "sdk",
-    "documentation"
-  ]
+  "license": "MIT"
 }

@@ -1,12 +1,13 @@
 ---
 name: find-examples
-description: Find usage examples of an API, library, or code pattern across internal repositories.
-  Use when looking for how other teams use an internal API, library, or pattern before implementing something new.
+description: Find usage examples of an API, library, or code pattern across internal repositories — use when looking for how other teams use an internal API, library, or pattern before implementing something new.
 ---
 
 # Find Examples
 
 Search across all repositories to find usage examples of an API, library, or pattern.
+
+Determine the API, library, or pattern from the user's request. If not specified, ask before proceeding.
 
 ## Core Principles
 
@@ -121,9 +122,9 @@ For each code example found, evaluate:
 
 ## No High-Quality Examples Found
 
-I searched for examples of [API/Pattern] but didn't find examples I'd recommend following.
+The assistant searched for examples of [API/Pattern] but didn't find examples worth recommending.
 
-**What I found:** [X] matches, but all were [outdated/low quality/different context]
+**What was found:** [X] matches, but all were [outdated/low quality/different context]
 
 **Suggested next steps:**
 1. Check the official documentation directly

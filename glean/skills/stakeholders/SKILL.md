@@ -1,12 +1,13 @@
 ---
 name: stakeholders
-description: Identify stakeholders who need to approve, consult on, or be informed about a change or project.
-  Use when planning a change that affects other teams or systems and needing to know who to involve, consult, or notify.
+description: Identify people who need to approve, consult on, or be informed about a change or project — use when someone asks who needs to know about a change, who should be looped in, who needs to approve, who should be consulted, who is affected, or needs a RACI for a change, refactor, migration, or decision.
 ---
 
 # Stakeholder Discovery
 
-Identify the right people to involve in a change, decision, or project.
+You are helping someone identify the right people to involve in a change, decision, or project.
+
+Determine the change, project, or decision from the user's request. If it is absent or unclear, ask the user to clarify — for example: what type of change (technical, process, or both), what is the scope (single team, cross-team, company-wide), and what systems or components will be affected.
 
 ## Core Principles
 
@@ -15,16 +16,22 @@ Identify the right people to involve in a change, decision, or project.
 - **Be skeptical**: Just because someone's name appears doesn't make them a stakeholder
 - **Fewer is better**: A focused list is more useful than a comprehensive one
 
+---
+
 ## Phase 1: Understand the Change
 
-Clarify what's being changed and why:
-- What type of change? (Technical, process, or both)
+**Goal**: Clarify what's being changed and why
+
+If the change is vague, ask the user to clarify:
+- What type of change is this? (Technical change, process change, or both)
 - What's the scope? (Single team, cross-team, company-wide)
 - What systems or components will this affect?
 
+---
+
 ## Phase 2: Find Stakeholders
 
-Identify technical owners, decision makers, and affected parties:
+**Goal**: Identify technical owners, decision makers, and affected parties
 
 1. Start with Glean chat for a synthesized stakeholder view:
    ```
@@ -43,9 +50,11 @@ Identify technical owners, decision makers, and affected parties:
    search "[affected system] integration OR dependency OR consumer"
    ```
 
-## Phase 3: Vet Each Stakeholder
+---
 
-For each person found, evaluate:
+## Phase 3: Vet Each Stakeholder (CRITICAL)
+
+**Goal**: Filter to people who genuinely need to be involved — BE SKEPTICAL
 
 | Test | ✅ Include | ⚠️ Caution | ❌ Reject |
 |------|-----------|-----------|---------|
@@ -55,9 +64,15 @@ For each person found, evaluate:
 | **Evidence** | Named in CODEOWNERS, documented owner, explicit dependency | Mentioned in related docs — verify | Just keyword matches |
 
 **Ask yourself**: "If I didn't include this person, what would go wrong?"
-- If the answer is "nothing" or "probably fine" → reject
+- If the answer is "nothing" or "probably fine" → REJECT
+
+---
 
 ## Phase 4: Generate Stakeholder Map
+
+**Goal**: Present organized, vetted stakeholder list
+
+Present the stakeholder map:
 
 ```markdown
 # Stakeholder Map: [Change/Project]
@@ -71,16 +86,19 @@ For each person found, evaluate:
 | [X] | [Y] | [Z] |
 
 ## Decision Makers (Must Approve)
+People who need to approve:
 | Name | Role | Why They Approve | Evidence |
 |------|------|------------------|----------|
 | [Name] | [Role] | [Reason] | [Source] |
 
 ## Technical Owners (Must Consult)
+People who own affected code/systems:
 | Name | Ownership | Last Active | Evidence |
 |------|-----------|-------------|----------|
 | [Name] | [What they own] | [When] | [CODEOWNERS/commits] |
 
 ## Downstream Teams (Must Inform)
+Teams affected by this change:
 | Team/Person | Impact | Evidence |
 |-------------|--------|----------|
 | [Team] | [How affected] | [Integration/dependency doc] |
@@ -90,6 +108,7 @@ For each person found, evaluate:
 |------|--------|
 | [Name] | Tangential involvement — no direct impact |
 | [Name] | Former owner, no longer relevant |
+| [Name] | Just mentioned topic, not a stakeholder |
 
 ## Recommended Engagement Order
 
@@ -104,7 +123,11 @@ For each person found, evaluate:
 4. Inform [downstream teams]
 ```
 
+---
+
 ## If Few or No Stakeholders Found
+
+This is valid — small changes may have few stakeholders:
 
 ```markdown
 # Stakeholder Map: [Change/Project]
@@ -113,16 +136,28 @@ For each person found, evaluate:
 
 This change appears to have limited stakeholder impact.
 
+**Confirmed Stakeholders:**
+- [Name]: [Role/reason]
+
 **Why the list is small:**
 - Change is contained to [specific area]
 - No downstream dependencies found
+- Single team ownership
 
 **Verify this is correct:**
 - Check with [team lead] that no dependencies were missed
 - Confirm [system] doesn't have undocumented consumers
 ```
 
+---
+
 ## Troubleshooting
 
-### Glean MCP Not Connected
-If you see errors about missing `mcp__glean` tools, check `~/.cursor/mcp.json` for a Glean server entry and use the mcp-setup skill to configure one.
+### Glean Tools Unavailable
+If Glean tools are unavailable, the Glean MCP server isn't connected for this host — point the user at their host's Glean MCP setup (see the mcp-setup skill).
+
+### Too Many Stakeholders
+If too many people appear relevant:
+- Apply vetting criteria strictly
+- Ask: "What breaks if I don't include them?"
+- Only include people with concrete evidence of stake

@@ -1,12 +1,13 @@
 ---
 name: similar-code
-description: Find similar implementations and prior art for a code pattern across internal repositories.
-  Use when checking whether something already exists internally before building it, or looking for reference implementations to follow.
+description: Find similar implementations and prior art for a code pattern across internal repositories — use when checking whether something already exists internally before building it, or looking for reference implementations to follow.
 ---
 
 # Similar Code
 
 Search for similar implementations across the organization to find prior art, alternative approaches, or shared solutions.
+
+Determine the pattern or feature from the user's request. If not specified, ask before proceeding.
 
 ## Core Principles
 
@@ -137,9 +138,9 @@ For each implementation found, evaluate:
 
 ## No Recommended Implementations Found
 
-Searched for implementations of [pattern] but didn't find any I'd recommend following.
+The assistant searched for implementations of [pattern] but didn't find any worth recommending.
 
-**What I found:** [X] matches, but all were [outdated/low quality/abandoned]
+**What was found:** [X] matches, but all were [outdated/low quality/abandoned]
 
 **Suggested next steps:**
 1. Check for external libraries: [suggestions]

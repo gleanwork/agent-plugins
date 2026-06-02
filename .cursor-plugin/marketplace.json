@@ -5,7 +5,7 @@
     "email": "steve.calvert@glean.com"
   },
   "metadata": {
-    "description": "Official Glean plugin for Cursor — enterprise knowledge, code search, and people discovery.",
+    "description": "Official Glean plugins for Cursor — enterprise knowledge, code search, and people discovery.",
     "keywords": [
       "glean",
       "enterprise-search",
@@ -19,8 +19,13 @@
     {
       "name": "glean",
       "source": "glean",
-      "description": "Official Glean plugin for Cursor — search documents, Slack, and email; explore code across repos; and find experts and stakeholders."
+      "description": "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding."
+    },
+    {
+      "name": "glean-dev-docs",
+      "source": "glean-dev-docs",
+      "description": "Search the public Glean developer documentation — APIs, SDKs, MCP, and integration guides for building with Glean."
     }
   ],
-  "version": "2.1.1"
+  "version": "2.2.0"
 }

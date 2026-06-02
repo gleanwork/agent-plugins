@@ -2,13 +2,13 @@ import { defineConfig } from "@gleanwork/pluginpack";
 
 export default defineConfig({
   name: "glean-plugins",
-  version: "2.1.1",
+  version: "2.2.0",
   source: {
     plugins: "sources",
     skills: "skills",
     rootPlugin: {
-      id: "cursor-skills",
-      description: "Portable Glean skills for AI coding tools.",
+      id: "glean-lib",
+      description: "Portable Glean skill library.",
     },
   },
   metadata: {
@@ -25,73 +25,58 @@ export default defineConfig({
   targets: {
     claude: {
       outDir: ".",
-      version: "2.0.0",
+      version: "2.2.0",
       manifest: {
         description:
-          "Official Glean plugins for Claude Code - enterprise knowledge integration",
+          "Official Glean plugins for Claude Code — enterprise knowledge, search, people, code, and meetings.",
       },
       plugins: {
-        "glean-core": { from: ["claude-glean-core"], path: "plugins/glean-core" },
-        "glean-search": { from: ["claude-glean-search"], path: "plugins/glean-search" },
-        "glean-people": { from: ["claude-glean-people"], path: "plugins/glean-people" },
-        "glean-meetings": { from: ["claude-glean-meetings"], path: "plugins/glean-meetings" },
-        "glean-docs": { from: ["claude-glean-docs"], path: "plugins/glean-docs" },
-        "glean-code": { from: ["claude-glean-code"], path: "plugins/glean-code" },
-        "glean-dev-docs": { from: ["claude-glean-dev-docs"], path: "plugins/glean-dev-docs" },
-        "glean-skills": { from: ["claude-glean-skills"], path: "plugins/glean-skills" },
-        "glean-productivity": { from: ["claude-glean-productivity"], path: "plugins/glean-productivity" },
-        "glean-project": { from: ["claude-glean-project"], path: "plugins/glean-project" },
+        glean: {
+          from: ["glean-lib", "shared", "claude"],
+          components: ["skills", "agents", "commands", "hooks"],
+          displayName: "Glean",
+          description:
+            "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
+        },
+        "glean-dev-docs": {
+          from: ["dev-docs"],
+          components: ["skills", "commands"],
+          displayName: "Glean Developer Docs",
+          description:
+            "Search the public Glean developer documentation — APIs, SDKs, MCP, and integration guides for building with Glean.",
+        },
       },
     },
     cursor: {
       outDir: ".",
-      version: "2.1.1",
+      version: "2.2.0",
       manifest: {
         metadata: {
           description:
-            "Official Glean plugin for Cursor — enterprise knowledge, code search, and people discovery.",
-          keywords: [
-            "glean",
-            "enterprise-search",
-            "knowledge-management",
-            "productivity",
-            "workplace",
-            "mcp",
-          ],
+            "Official Glean plugins for Cursor — enterprise knowledge, code search, and people discovery.",
+          keywords: ["glean", "enterprise-search", "knowledge-management", "productivity", "workplace", "mcp"],
         },
       },
       plugins: {
         glean: {
-          from: ["cursor-glean", "cursor-skills"],
-          components: ["skills", "agents", "rules"],
+          from: ["glean-lib", "shared", "cursor"],
+          components: ["skills", "agents", "rules", "commands", "assets"],
           displayName: "Glean",
           description:
-            "Official Glean plugin for Cursor — search documents, Slack, and email; explore code across repos; and find experts and stakeholders.",
+            "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
           manifest: {
             logo: "assets/avatar.svg",
-            keywords: [
-              "glean",
-              "enterprise-search",
-              "knowledge-management",
-              "productivity",
-              "workplace",
-              "code-search",
-              "people-search",
-              "mcp",
-            ],
+            keywords: ["glean", "enterprise-search", "knowledge-management", "productivity", "workplace", "code-search", "people-search", "mcp"],
             category: "productivity",
-            tags: [
-              "mcp",
-              "enterprise",
-              "search",
-              "documents",
-              "slack",
-              "code",
-              "people",
-              "experts",
-              "org",
-            ],
+            tags: ["mcp", "enterprise", "search", "documents", "slack", "code", "people", "experts", "org"],
           },
+        },
+        "glean-dev-docs": {
+          from: ["dev-docs"],
+          components: ["skills"],
+          displayName: "Glean Developer Docs",
+          description:
+            "Search the public Glean developer documentation — APIs, SDKs, MCP, and integration guides for building with Glean.",
         },
       },
     },

@@ -1,12 +1,13 @@
 ---
 name: code-owners
-description: Identify who owns, maintains, or has expertise in a specific code area or component.
-  Use when asked who to talk to about a system, who to request a code review from, or who has been actively working in a codebase area.
+description: Identify who owns, maintains, or has expertise in a specific code area — use when asked who to talk to about a system, who to request a code review from, or who has been actively working in a codebase area.
 ---
 
 # Code Owners
 
 Identify who owns, maintains, or has expertise in a specific code area.
+
+Determine the component or codebase area from the user's request. If not specified, ask before proceeding.
 
 ## Core Principles
 

@@ -1,12 +1,15 @@
 ---
 name: find-expert
-description: Find subject matter experts for a topic based on code contributions, document authorship, and activity signals.
-  Use when asked who knows about a topic, technology, or system — finding real experts based on contributions rather than just job titles.
+description: Find subject matter experts on a topic, technology, or internal system by combining real expertise signals (code contributions, document authorship, and meeting or discussion activity) rather than relying on job titles. Use this whenever the user wants to know who to ask about something — phrasings such as who knows about, who is the expert on, the go-to person for, who has worked on, who can I ask about, or subject matter expert for. Use it even when the user does not say the word expert but clearly needs a person with deep, demonstrated knowledge of an area. Do not use it for plain directory lookups (an email address, manager, or org placement with no expertise angle), which is a simple employee lookup.
 ---
 
 # Find Expert
 
 Find people who *actually* know about a topic — not just by org chart, but by real contributions and activity.
+
+## Clarify the topic
+
+Work from the topic the user named. If it is ambiguous, ask a brief clarifying question before searching — for example, whether they need someone to answer questions, review code, or make a decision, and whether this is a specific internal system or a general technology. A single sentence of clarification is enough; don't interrogate.
 
 ## Core Principles
 
@@ -15,17 +18,11 @@ Find people who *actually* know about a topic — not just by org chart, but by 
 - **Be skeptical**: Just mentioning a topic doesn't make someone an expert
 - **Quality over quantity**: 3 vetted experts beats 10 names
 
-## Phase 1: Understand the Query
-
-Clarify what expertise is needed:
-- What type of expertise? (Answer questions, review code, make decisions, general knowledge)
-- Is this about a specific system or a general technology?
-
-## Phase 2: Gather Expertise Signals
+## Phase 1: Gather Expertise Signals
 
 Find people with multiple evidence of expertise:
 
-1. Start with Glean chat for a synthesized answer:
+1. Start with a synthesized answer from your knowledge tool:
    ```
    chat "Who are the experts on [topic] at our company? Consider code contributions, documentation authorship, and meeting participation."
    ```
@@ -39,7 +36,7 @@ Find people with multiple evidence of expertise:
 
 3. Cross-reference to find people appearing in multiple sources.
 
-## Phase 3: Vet Each Candidate
+## Phase 2: Vet Each Candidate
 
 For each person found, evaluate:
 
@@ -57,7 +54,7 @@ For each person found, evaluate:
 - Former employees
 - People with outdated involvement
 
-## Phase 4: Generate Expertise Report
+## Phase 3: Generate Expertise Report
 
 ```markdown
 # Expert Finder: [Topic]
@@ -131,5 +128,5 @@ Searched for experts on [topic] but didn't find people with strong evidence of e
 
 ## Troubleshooting
 
-### Glean MCP Not Connected
-If you see errors about missing `mcp__glean` tools, check `~/.cursor/mcp.json` for a Glean server entry and use the mcp-setup skill to configure one.
+### Knowledge Tools Not Connected
+If you see errors about missing Glean tools, confirm the Glean MCP server is configured for your host and re-run setup if needed before retrying.

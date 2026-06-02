@@ -1,8 +1,8 @@
 {
   "name": "glean",
   "displayName": "Glean",
-  "version": "2.1.1",
-  "description": "Official Glean plugin for Cursor — search documents, Slack, and email; explore code across repos; and find experts and stakeholders.",
+  "version": "2.2.0",
+  "description": "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
   "author": {
     "name": "Glean",
     "email": "steve.calvert@glean.com",
@@ -36,5 +36,7 @@
   ],
   "skills": "./skills/",
   "agents": "./agents/",
-  "rules": "./rules/"
+  "rules": "./rules/",
+  "commands": "./commands/",
+  "assets": "./assets/"
 }

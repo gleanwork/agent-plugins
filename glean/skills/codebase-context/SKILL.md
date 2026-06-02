@@ -1,12 +1,13 @@
 ---
 name: codebase-context
-description: Gather architectural context about an internal system from code and documentation across the organization.
-  Use when asked to understand a system's architecture, find its repos, or get an overview before working on it.
+description: Gather architectural context about an internal system from code and documentation across the organization — use when asked to understand a system's architecture, find its repos, or get an overview before working on it.
 ---
 
 # Codebase Context
 
 Gather comprehensive architectural context about an internal system by searching code and documentation across the organization.
+
+Determine the system name from the user's request. If not specified, ask before proceeding.
 
 ## Core Principles
 
@@ -126,7 +127,7 @@ For each piece of content, evaluate:
 
 Found limited authoritative information about this system.
 
-**What I found:** [code/docs summary]
+**What was found:** [code/docs summary]
 **Gaps:** No recent design documentation, no clear architectural overview
 
 **Suggested next steps:**

@@ -1,7 +1,6 @@
 ---
 name: plan-prep
-description: Research enterprise context before plan mode — design docs, similar implementations, stakeholders, and related systems.
-  Use when about to plan or design a feature and wanting to surface relevant RFCs, prior art, code owners, and related systems first.
+description: Research enterprise context before plan mode — surface design docs, similar implementations, stakeholders, and related systems before architecting or designing a feature.
 ---
 
 # Planning Preparation via Glean
