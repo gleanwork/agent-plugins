@@ -37,5 +37,5 @@ This skill carries the *workflow* on top.
 
 ## Related skills
 
-- `my-week` — full weekly summary with analysis
-- `daily-briefing` — what happened in the last 24 hours
+- **project-awareness** — quick status read on a project (when the user isn't the subject)
+- **using-glean** — general enterprise knowledge search

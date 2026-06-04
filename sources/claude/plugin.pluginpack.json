@@ -1,0 +1,3 @@
+{
+  "description": "Claude Code-specific assets for the Glean plugin. Carries the plugin's static files (README, LICENSE, CHANGELOG) today; the memory-sync hook and its scripts are added here later."
+}

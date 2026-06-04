@@ -27,51 +27,19 @@ Restart Cursor after editing — OAuth authentication is handled automatically o
 
 ## What's Included
 
-### Skills
+The plugin ships a library of skills (plus supporting agents and rules) that
+auto-trigger by task — there's no per-skill install. They cover:
 
-| Skill | Description |
-| ----- | ----------- |
-| `enterprise-search` | Search company docs, wikis, policies, and internal knowledge |
-| `search` | Structured Glean search with result vetting and quality assessment |
-| `mcp-setup` | Configure a Glean MCP server connection in Cursor |
-| `mcp-status` | Check the status of your Glean MCP connection |
-| `glean-tools-guide` | Reference for selecting the right Glean tool |
-| `confidence-signals` | Communicate reliability and freshness of Glean results |
-| `meeting-context` | Find decisions and action items from meetings |
-| `people-lookup` | Find people by role, team, or expertise |
-| `synthesis-patterns` | Combine results across multiple Glean sources |
-| `code-exploration` | Explore code across your org's repositories |
-| `code-owners` | Identify who owns or maintains a code area |
-| `codebase-context` | Get architectural context from internal repositories |
-| `find-examples` | Find usage examples of APIs or patterns across the org |
-| `plan-prep` | Research enterprise context before planning a feature |
-| `similar-code` | Find similar implementations across repos |
-| `find-expert` | Find subject matter experts based on contributions |
-| `stakeholders` | Identify stakeholders for a change or project |
+- **Enterprise search & knowledge** — find documents, Slack messages, and email; vet results for freshness and authority.
+- **Code across repos** — explore implementations, find usage examples and similar code, identify code owners, and gather architectural context.
+- **People & org** — find experts by contribution, and identify stakeholders for a change or project.
+- **Meetings** — prep for upcoming meetings and catch up on what you missed.
+- **Onboarding & projects** — ramp up on a team or area, read quick project status, and generate comprehensive project handoffs.
+- **Personal productivity** — summarize your own activity, prep status updates, and surface what needs your attention.
+- **Skill authoring** — discover automation opportunities and generate new skills.
 
-### Agents
-
-| Agent | Description |
-| ----- | ----------- |
-| `enterprise-searcher` | Searches enterprise knowledge across documents, Slack, and email |
-| `people-finder` | Finds people by role, expertise, or org relationship |
-| `codebase-navigator` | Navigates internal code repos to find implementations and trace dependencies |
-| `plan-prep-researcher` | Researches enterprise context and similar patterns for planning tasks |
-
-### Commands
-
-| Command | Description |
-| ------- | ----------- |
-| `/mcp-setup` | Walk through Glean MCP server setup |
-| `/mcp-status` | Check your Glean MCP connection |
-| `/search` | Search Glean enterprise knowledge |
-| `/code-owners` | Find who owns a code area |
-| `/codebase-context` | Get architectural context for a system |
-| `/find-examples` | Find usage examples across repos |
-| `/plan-prep` | Research context before entering plan mode |
-| `/similar-code` | Find similar implementations |
-| `/find-expert` | Find experts on a topic |
-| `/stakeholders` | Identify stakeholders for a change |
+Glean tools are used through whatever Glean MCP server is connected in Cursor;
+if none is configured, see your host's Glean MCP setup (above).
 
 ## Requirements
 
@@ -83,7 +51,7 @@ Restart Cursor after editing — OAuth authentication is handled automatically o
 
 - [Glean MCP Documentation](https://docs.glean.com/mcp)
 - [Glean Support](https://help.glean.com)
-- [GitHub Issues](https://github.com/gleanwork/cursor-plugins/issues)
+- [GitHub Issues](https://github.com/gleanwork/agent-plugins/issues)
 
 ## License
 

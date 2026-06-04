@@ -1,8 +1,9 @@
 import { defineConfig } from "@gleanwork/pluginpack";
+import pkg from "./package.json" with { type: "json" };
 
 export default defineConfig({
   name: "glean-plugins",
-  version: "2.2.0",
+  version: pkg.version,
   source: {
     plugins: "sources",
     skills: "skills",
@@ -25,7 +26,7 @@ export default defineConfig({
   targets: {
     claude: {
       outDir: ".",
-      version: "2.2.0",
+      version: pkg.version,
       manifest: {
         description:
           "Official Glean plugins for Claude Code — enterprise knowledge, search, people, code, and meetings.",
@@ -33,7 +34,7 @@ export default defineConfig({
       plugins: {
         glean: {
           from: ["glean-lib", "shared", "claude"],
-          components: ["skills", "agents", "hooks"],
+          components: ["skills", "agents"],
           displayName: "Glean",
           description:
             "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
@@ -49,7 +50,7 @@ export default defineConfig({
     },
     cursor: {
       outDir: ".",
-      version: "2.2.0",
+      version: pkg.version,
       manifest: {
         metadata: {
           description:

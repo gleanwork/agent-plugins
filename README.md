@@ -45,7 +45,7 @@ Cursor, Gemini CLI, and Copilot all support. Write a skill once; it ships
 everywhere, and per-host quirks are neutralized at build time.
 
 > The plugins don't bundle a Glean MCP server — users connect one themselves
-> (the `mcp-setup` command guides that). The skills then use whatever Glean MCP
+> (your host's Glean MCP setup guides that). The skills then use whatever Glean MCP
 > tools are available in the host.
 
 ## Develop

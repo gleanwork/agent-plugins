@@ -1,34 +1,28 @@
-# Glean for Cursor
+# Glean for Claude Code
 
-Official Glean plugin for [Cursor](https://cursor.com) — enterprise search, code exploration,
-and people discovery directly in your development workflow.
+Official Glean plugin for [Claude Code](https://claude.com/claude-code) — enterprise search,
+code exploration, and people discovery directly in your development workflow.
 
 ## Setup
 
 ### 1. Install the plugin
 
-Install from the [Cursor marketplace](https://cursor.com/marketplace/glean).
+Install from the Claude Code plugin marketplace.
 
 ### 2. Configure your Glean MCP server
 
-Visit the [Glean MCP configurator](https://app.glean.com/settings/install?mcpConfigure=true&mcpHost=cursor) to get your server URL, then add it to `~/.cursor/mcp.json`:
+Add your Glean MCP server (get your server URL from the [Glean MCP configurator](https://app.glean.com/settings/install?mcpConfigure=true)):
 
-```json
-{
-  "mcpServers": {
-    "glean": {
-      "url": "YOUR-GLEAN-MCP-URL"
-    }
-  }
-}
+```bash
+claude mcp add glean https://YOUR-INSTANCE-be.glean.com/mcp/default --transport http --scope user
 ```
 
-Restart Cursor after editing — OAuth authentication is handled automatically on first use.
+Restart Claude Code after adding — OAuth authentication is handled automatically on first use.
 
 ## What's Included
 
-The plugin ships a library of skills (plus supporting agents and rules) that
-auto-trigger by task — there's no per-skill install. They cover:
+The plugin ships a library of skills (plus supporting agents) that auto-trigger
+by task — there's no per-skill install. They cover:
 
 - **Enterprise search & knowledge** — find documents, Slack messages, and email; vet results for freshness and authority.
 - **Code across repos** — explore implementations, find usage examples and similar code, identify code owners, and gather architectural context.
@@ -38,14 +32,14 @@ auto-trigger by task — there's no per-skill install. They cover:
 - **Personal productivity** — summarize your own activity, prep status updates, and surface what needs your attention.
 - **Skill authoring** — discover automation opportunities and generate new skills.
 
-Glean tools are used through whatever Glean MCP server is connected in Cursor;
-if none is configured, see your host's Glean MCP setup (above).
+Glean tools are used through whatever Glean MCP server is connected in Claude
+Code; if none is configured, see the setup above.
 
 ## Requirements
 
-- [Cursor](https://cursor.com) (latest version)
+- [Claude Code](https://claude.com/claude-code) (latest version)
 - A Glean account with MCP access
-- Your Glean MCP server URL (get it from the [Glean MCP configurator](https://app.glean.com/settings/install?mcpConfigure=true&mcpHost=cursor))
+- Your Glean MCP server URL (get it from the [Glean MCP configurator](https://app.glean.com/settings/install?mcpConfigure=true))
 
 ## Support
 
