@@ -54,7 +54,7 @@ jobs:
       # Mint a short-lived token scoped only to this target's output repo.
       - name: Mint output-repo token
         id: app-token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.PLUGINPACK_APP_ID }}
           private-key: ${{ secrets.PLUGINPACK_APP_KEY }}
