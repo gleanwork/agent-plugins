@@ -56,7 +56,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v2
         with:
-          app-id: ${{ vars.PLUGINPACK_APP_ID }}
+          app-id: ${{ vars.PLUGINPACK_APP_ID || secrets.PLUGINPACK_APP_ID }}
           private-key: ${{ secrets.PLUGINPACK_APP_KEY }}
           owner: gleanwork
           repositories: ${{ matrix.repo }}
