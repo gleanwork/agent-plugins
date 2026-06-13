@@ -62,8 +62,9 @@ jobs:
           repositories: ${{ matrix.repo }}
 
       - name: Sync ${{ matrix.target }}
-        # Pinned pre-v1; repoint to @v1 after the first proven sync.
-        uses: gleanwork/pluginpack-action@c8f7f11
+        # Pinned pre-v1 (Actions requires the full SHA); repoint to @v1 after
+        # the first proven sync.
+        uses: gleanwork/pluginpack-action@52a7c266ffa90d35289f2a34e83db028c7945ccc
         with:
           target: ${{ matrix.target }}
           output-repo: gleanwork/${{ matrix.repo }}
