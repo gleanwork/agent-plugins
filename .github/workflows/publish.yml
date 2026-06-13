@@ -1,0 +1,72 @@
+name: Publish plugins
+
+# Sync generated plugin output into the published install-surface repos by
+# opening a PR in each. Runs on a published release; can also be dispatched
+# manually (use mode=check for a dry staleness check).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: sync (open PRs) or check (fail if any output is stale)
+        type: choice
+        options: [sync, check]
+        default: sync
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: ${{ matrix.target }} → ${{ matrix.repo }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: claude
+            repo: claude-plugins
+          - target: cursor
+            repo: cursor-plugins
+    concurrency:
+      group: pluginpack-sync-${{ matrix.target }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      # Install so pluginpack.config.ts's imports resolve and the pinned
+      # pluginpack version can be read for the action below.
+      - name: Install
+        run: npm ci
+
+      - name: Resolve pinned pluginpack version
+        id: pp
+        run: echo "version=$(node -p "require('@gleanwork/pluginpack/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      # Mint a short-lived token scoped only to this target's output repo.
+      - name: Mint output-repo token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.PLUGINPACK_APP_ID }}
+          private-key: ${{ secrets.PLUGINPACK_APP_KEY }}
+          owner: gleanwork
+          repositories: ${{ matrix.repo }}
+
+      - name: Sync ${{ matrix.target }}
+        # Pinned pre-v1; repoint to @v1 after the first proven sync.
+        uses: gleanwork/pluginpack-action@c8f7f11
+        with:
+          target: ${{ matrix.target }}
+          output-repo: gleanwork/${{ matrix.repo }}
+          token: ${{ steps.app-token.outputs.token }}
+          pluginpack-version: ${{ steps.pp.outputs.version }}
+          mode: ${{ inputs.mode || 'sync' }}
