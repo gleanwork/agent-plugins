@@ -7,7 +7,9 @@
   "github": {
     "release": true
   },
-  "npm": false,
+  "npm": {
+    "publish": false
+  },
   "hooks": {
     "after:bump": "npm run build"
   },
