@@ -27,5 +27,5 @@
       "description": "Search the public Glean developer documentation — APIs, SDKs, MCP, and integration guides for building with Glean."
     }
   ],
-  "version": "2.2.0"
+  "version": "3.0.0"
 }
