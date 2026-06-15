@@ -12,16 +12,14 @@
   "scripts": {
     "build": "pluginpack build",
     "clean": "pluginpack clean",
-    "diff:claude": "pluginpack diff --target claude --against .",
-    "diff:cursor": "pluginpack diff --target cursor --against .",
     "prune": "pluginpack prune",
-    "test": "npm run diff:claude && npm run diff:cursor",
-    "validate": "pluginpack validate --target claude --dir . && pluginpack validate --target cursor --dir .",
+    "validate": "pluginpack validate --target claude --dir dist/claude && pluginpack validate --target cursor --dir dist/cursor",
+    "test": "npm run build && npm run validate",
     "prebuild": "node scripts/sync-changelog.mjs",
     "release": "release-it"
   },
   "devDependencies": {
-    "@gleanwork/pluginpack": "^0.5.0",
+    "@gleanwork/pluginpack": "^0.6.0",
     "@release-it/conventional-changelog": "^11.0.1",
     "release-it": "^20.2.0"
   },

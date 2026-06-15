@@ -25,8 +25,9 @@ export default defineConfig({
   },
   targets: {
     claude: {
-      outDir: ".",
+      outDir: "dist/claude",
       version: pkg.version,
+      rootFiles: { "README.md": "roots/claude/README.md" },
       manifest: {
         description:
           "Official Glean plugins for Claude Code — enterprise knowledge, search, people, code, and meetings.",
@@ -49,8 +50,9 @@ export default defineConfig({
       },
     },
     cursor: {
-      outDir: ".",
+      outDir: "dist/cursor",
       version: pkg.version,
+      rootFiles: { "README.md": "roots/cursor/README.md" },
       manifest: {
         metadata: {
           description:

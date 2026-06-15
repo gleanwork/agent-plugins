@@ -49,7 +49,7 @@ jobs:
 
       - name: Resolve pinned pluginpack version
         id: pp
-        run: echo "version=$(node -p "require('@gleanwork/pluginpack/package.json').version")" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(node -p "require('./node_modules/@gleanwork/pluginpack/package.json').version")" >> "$GITHUB_OUTPUT"
 
       # Mint a short-lived token scoped only to this target's output repo.
       - name: Mint output-repo token

@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Generated build output (published to the target repos by CI)
+dist/
+
 # OS files
 .DS_Store
 Thumbs.db
