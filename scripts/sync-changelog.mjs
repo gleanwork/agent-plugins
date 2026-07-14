@@ -9,7 +9,12 @@ import { dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const source = join(root, "CHANGELOG.md");
-const buckets = ["sources/claude", "sources/cursor", "sources/dev-docs"];
+const buckets = [
+  "sources/claude",
+  "sources/codex",
+  "sources/cursor",
+  "sources/dev-docs",
+];
 
 for (const bucket of buckets) {
   copyFileSync(source, join(root, bucket, "CHANGELOG.md"));

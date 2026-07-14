@@ -4,20 +4,21 @@ The source-of-truth repository for Glean's official plugins for AI coding
 assistants. One portable library of skills, agents, rules, commands, and hooks
 is authored here once, and [`pluginpack`](https://github.com/gleanwork/pluginpack)
 compiles it into the native plugin layout each host expects — today **Claude
-Code** and **Cursor**. The same skills ship to every target; only each host's
-manifest layer differs, and pluginpack generates that.
+Code**, **Cursor**, and **Codex**. Most skills share one base source; target
+overrides handle the few host-specific setup and capability differences.
 
 ## Layout
 
 | Path | What it is |
 |------|------------|
-| `skills/` | The portable skill library — one `SKILL.md` (plus optional `references/`) per capability, in the open Agent Skills format. Host-agnostic; **the source of truth.** |
-| `sources/shared/` | Components shared by every target (subagents). |
+| `skills/` | The portable skill library — one `SKILL.md` (plus optional `references/`) per capability, with host-specific files only under `targets/<host>/`. **The source of truth.** |
+| `sources/shared/` | Components shared by targets that support them (subagents). |
 | `sources/claude/` | Claude-only components (slash-commands, hooks). |
+| `sources/codex/` | Codex-only plugin documentation and static files. |
 | `sources/cursor/` | Cursor-only components (rules, commands, assets). |
 | `sources/dev-docs/` | Source for the separate `glean-dev-docs` plugin. |
 | `pluginpack.config.ts` | Build config — which sources compose into which plugin, per target. |
-| `plugins/`, `glean/`, `glean-dev-docs/`, `.claude-plugin/`, `.cursor-plugin/` | **Generated** output. Don't edit by hand — it's rebuilt from source. |
+| `plugins/`, `glean/`, `glean-dev-docs/`, `.agents/`, `.codex-plugin/`, `.claude-plugin/`, `.cursor-plugin/` | **Generated** output. Don't edit by hand — it's rebuilt from source. |
 
 ## Plugins produced
 
@@ -38,11 +39,13 @@ components, and emits each host's native format:
   skills, commands, and hooks.
 - **Cursor** — a marketplace + `plugin.json` referencing skills, agents, rules,
   and commands.
+- **Codex** — a marketplace + `.codex-plugin/plugin.json` for each plugin,
+  with bundled skills and install-surface metadata.
 
 Skills use the open Agent Skills format — `SKILL.md` with `name`/`description`
 frontmatter and optional `references/` loaded on demand — which Claude Code,
-Cursor, Gemini CLI, and Copilot all support. Write a skill once; it ships
-everywhere, and per-host quirks are neutralized at build time.
+Codex, Cursor, Gemini CLI, and Copilot all support. Base skills ship everywhere;
+target overrides handle the few host-specific differences.
 
 > The plugins don't bundle a Glean MCP server — users connect one themselves
 > (your host's Glean MCP setup guides that). The skills then use whatever Glean MCP
@@ -56,7 +59,7 @@ Requires Node >= 24. Install once with `npm install`.
 |---------|--------------|
 | `npm run build` | Compile all targets into the generated plugin output. |
 | `npm run validate` | Validate each target's generated output. |
-| `npm test` | Diff a fresh build against the committed output (staleness gate). |
+| `npm test` | Build every target, then validate each generated output. |
 | `npm run prune` | Remove stale generated files. |
 | `npm run clean` | Remove all generated output. |
 
@@ -65,7 +68,8 @@ Requires Node >= 24. Install once with `npm install`.
 1. Edit or create `skills/<name>/SKILL.md` (add `references/*.md` for deep,
    load-on-demand detail).
 2. `npm run build` to regenerate the plugins.
-3. `npm test` to confirm the output is well-formed and in sync.
+3. `npm test` to confirm every target builds and validates cleanly.
 
-Because every target compiles from the same `skills/` source, a change lands in
-all of them at once.
+Base skill changes reach every target that includes them. When one host needs
+different instructions, add a full replacement at
+`skills/<name>/targets/<host>/SKILL.md`; other targets keep the base file.

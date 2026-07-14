@@ -83,5 +83,77 @@ export default defineConfig({
         },
       },
     },
+    codex: {
+      outDir: "dist/codex",
+      rootFiles: {
+        "README.md": "roots/codex/README.md",
+        LICENSE: "LICENSE",
+      },
+      manifest: {
+        name: "glean-codex-plugins",
+        interface: { displayName: "Glean for Codex" },
+      },
+      plugins: {
+        glean: {
+          from: ["glean-lib", "codex"],
+          components: ["skills"],
+          description:
+            "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
+          manifest: {
+            interface: {
+              displayName: "Glean",
+              shortDescription: "Enterprise knowledge in Codex",
+              longDescription:
+                "Search enterprise documents, Slack, email, code, and people; prepare for meetings; and synthesize trusted company knowledge in Codex.",
+              developerName: "Glean",
+              category: "Productivity",
+              capabilities: ["Read", "Search"],
+              defaultPrompt: [
+                "Search Glean for the latest project decision.",
+                "Find an expert on this codebase.",
+                "Prepare me for my next meeting.",
+              ],
+            },
+          },
+          entry: {
+            policy: {
+              installation: "AVAILABLE",
+              authentication: "ON_INSTALL",
+            },
+            category: "Productivity",
+          },
+        },
+        "glean-dev-docs": {
+          from: ["dev-docs"],
+          components: ["skills"],
+          description:
+            "Search the public Glean developer documentation — APIs, SDKs, MCP, and integration guides for building with Glean.",
+          manifest: {
+            homepage: "https://developers.glean.com/",
+            interface: {
+              displayName: "Glean Developer Docs",
+              shortDescription: "Build with Glean in Codex",
+              longDescription:
+                "Search public Glean API, SDK, MCP, authentication, and integration documentation while you build in Codex.",
+              developerName: "Glean",
+              category: "Productivity",
+              capabilities: ["Read", "Search"],
+              defaultPrompt: [
+                "How do I authenticate with the Glean API?",
+                "Find the Glean Indexing API documentation.",
+                "Show me a Glean SDK example.",
+              ],
+            },
+          },
+          entry: {
+            policy: {
+              installation: "AVAILABLE",
+              authentication: "ON_INSTALL",
+            },
+            category: "Productivity",
+          },
+        },
+      },
+    },
   },
 });
