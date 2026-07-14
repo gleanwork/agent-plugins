@@ -18,8 +18,28 @@ permissions:
   contents: read
 
 jobs:
+  validate:
+    name: Validate all targets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build and validate
+        run: npm test
+
   publish:
     name: ${{ matrix.target }} → ${{ matrix.repo }}
+    needs: validate
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -29,6 +49,8 @@ jobs:
             repo: claude-plugins
           - target: cursor
             repo: cursor-plugins
+          - target: codex
+            repo: codex-plugins
     concurrency:
       group: pluginpack-sync-${{ matrix.target }}
       cancel-in-progress: true

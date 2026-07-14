@@ -13,13 +13,13 @@
     "build": "pluginpack build",
     "clean": "pluginpack clean",
     "prune": "pluginpack prune",
-    "validate": "pluginpack validate --target claude --dir dist/claude && pluginpack validate --target cursor --dir dist/cursor",
+    "validate": "pluginpack validate --target claude --dir dist/claude && pluginpack validate --target cursor --dir dist/cursor && pluginpack validate --target codex --dir dist/codex",
     "test": "npm run build && npm run validate",
     "prebuild": "node scripts/sync-changelog.mjs",
     "release": "release-it"
   },
   "devDependencies": {
-    "@gleanwork/pluginpack": "^0.6.0",
+    "@gleanwork/pluginpack": "^0.7.0",
     "@release-it/conventional-changelog": "^11.0.1",
     "release-it": "^20.2.0"
   },
