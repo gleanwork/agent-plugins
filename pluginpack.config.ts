@@ -95,8 +95,8 @@ export default defineConfig({
       },
       plugins: {
         glean: {
-          from: ["glean-lib", "codex"],
-          components: ["skills"],
+          from: ["glean-lib", "codex", "codex-assets"],
+          components: ["skills", "assets"],
           description:
             "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
           manifest: {
@@ -113,6 +113,8 @@ export default defineConfig({
                 "Find an expert on this codebase.",
                 "Prepare me for my next meeting.",
               ],
+              composerIcon: "./assets/avatar.png",
+              logo: "./assets/avatar.png",
             },
           },
           entry: {
@@ -124,8 +126,8 @@ export default defineConfig({
           },
         },
         "glean-dev-docs": {
-          from: ["dev-docs"],
-          components: ["skills"],
+          from: ["dev-docs", "codex-assets"],
+          components: ["skills", "assets"],
           description:
             "Search the public Glean developer documentation — APIs, SDKs, MCP, and integration guides for building with Glean.",
           manifest: {
@@ -143,6 +145,8 @@ export default defineConfig({
                 "Find the Glean Indexing API documentation.",
                 "Show me a Glean SDK example.",
               ],
+              composerIcon: "./assets/avatar.png",
+              logo: "./assets/avatar.png",
             },
           },
           entry: {
