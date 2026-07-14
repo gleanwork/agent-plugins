@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0](https://github.com/gleanwork/agent-plugins/compare/v3.0.0...v3.1.0) (2026-07-14)
+
+### Features
+
+* add Codex plugin support ([#1](https://github.com/gleanwork/agent-plugins/issues/1)) ([10a8b1e](https://github.com/gleanwork/agent-plugins/commit/10a8b1ee34f464a60c19d3c2fa60a2e3e5aa061e))
+
 ## 3.0.0 (2026-06-14)
 
 ### Features

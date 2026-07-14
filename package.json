@@ -1,6 +1,6 @@
 {
   "name": "@gleanwork/agent-plugins",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Official Glean agent plugins for AI coding tools.",
   "license": "MIT",
   "author": {
