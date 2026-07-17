@@ -73,3 +73,13 @@ Requires Node >= 24. Install once with `npm install`.
 Base skill changes reach every target that includes them. When one host needs
 different instructions, add a full replacement at
 `skills/<name>/targets/<host>/SKILL.md`; other targets keep the base file.
+
+### Commit conventions
+
+Releases and the changelog are driven by [Conventional Commits](https://www.conventionalcommits.org/).
+In this repo the skill markdown *is* the shipped product, so:
+
+- Use `feat:` / `fix:` for any change to `skills/` or `sources/` content —
+  it alters what users install, even when the change is "just docs".
+- Reserve `docs:` for repo-level documentation that doesn't ship (README,
+  contributing notes, etc.).
