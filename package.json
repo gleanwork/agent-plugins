@@ -11,17 +11,35 @@
   "type": "module",
   "scripts": {
     "build": "pluginpack build",
+    "build:bundle": "node sources/glean-vnext/build.mjs",
     "clean": "pluginpack clean",
     "prune": "pluginpack prune",
+    "typecheck:bundle": "tsc --noEmit -p sources/glean-vnext/tsconfig.json",
+    "test:bundle": "vitest run --root sources/glean-vnext",
     "validate": "pluginpack validate --target claude --dir dist/claude && pluginpack validate --target cursor --dir dist/cursor && pluginpack validate --target codex --dir dist/codex",
     "test": "npm run build && npm run validate",
-    "prebuild": "node scripts/sync-changelog.mjs",
+    "prebuild": "node scripts/sync-changelog.mjs && npm run build:bundle",
     "release": "release-it"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "yaml": "^2.7.0"
   },
   "devDependencies": {
     "@gleanwork/pluginpack": "^0.7.0",
     "@release-it/conventional-changelog": "^11.0.1",
-    "release-it": "^20.2.0"
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.28.1",
+    "release-it": "^20.2.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  },
+  "//overrides": "Pin hono>=4.12.25 (CVE-2026-54290, transitive from @modelcontextprotocol/sdk); pin esbuild/vite to clear CVE blocks that prevented install. Mirrors glean-experimental-plugins overrides.",
+  "overrides": {
+    "hono": "^4.12.25",
+    "esbuild": "$esbuild",
+    "vite": "7.3.5"
   },
   "engines": {
     "node": ">=24"

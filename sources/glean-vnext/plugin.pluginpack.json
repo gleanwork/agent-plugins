@@ -1,0 +1,8 @@
+{
+  "description": "Glean runtime MCP server — a local stdio server (find_skills, run_tool, setup), the glean_run skill, and an auto-approve hook. Folded into the glean emitted plugin so it coexists with the portable skills; a user may still connect a remote Glean MCP server separately. The local server is named glean-local to avoid clashing with a remote glean server.",
+  "files": {
+    "dist/index.js": "dist/index.js",
+    "start.mjs": "start.mjs",
+    "package.json": "package.json"
+  }
+}
