@@ -3,7 +3,7 @@
 Merging the glean-vnext runtime MCP server into the existing `glean` emitted plugin.
 
 ## Draft PRs
-- **pluginpack** (enables this): https://github.com/gleanwork/pluginpack/pull/11 — `feat: per-target MCP config overrides + plugin-root files` (branch `eshwar/per-target-mcp-and-plugin-root-files`)
+- **pluginpack** (enables this): https://github.com/gleanwork/pluginpack/pull/11 — `feat: per-target MCP config overrides + plugin-root files` (branch `eshwar/per-target-mcp-and-plugin-root-files`; merged with `main`'s 0.8.0 target-registry refactor, `MERGEABLE`)
 - **agent-plugins** (this work): https://github.com/gleanwork/agent-plugins/pull/3 — `feat: fold glean-vnext runtime MCP server into the glean plugin` (branch `eshwar/glean-vnext-fold-into-glean`)
 
 ---
@@ -39,16 +39,16 @@ The glean-vnext runtime MCP server moved out of `glean-experimental-plugins` int
 
 ## ⚠️ Release blocker
 
-agent-plugins depends on **`@gleanwork/pluginpack@^0.7.0`** (published), which lacks the new `files` + per-target `.mcp.json` override features. The work in PR #3 requires **`@gleanwork/pluginpack@^0.8.0`** (PR #11) once published.
+agent-plugins depends on **`@gleanwork/pluginpack@^0.7.0`**. The latest published pluginpack is **`0.8.0`**, but it shipped a target-registry refactor **without** the `files` + per-target `.mcp.json` override features this work needs. Those features live on pluginpack PR #11, which has been **merged up to `main` (rebased onto the 0.8.0 refactor)** but **not yet released** — so they will land in the **next** pluginpack release (**`0.8.1`** / next minor), not `0.8.0`.
 
-**Until 0.8.0 is published, build locally:**
+**Until that release ships, build locally:**
 ```bash
-cd ../pluginpack && npm install && npm run build && npm link
+cd ../pluginpack && git checkout eshwar/per-target-mcp-and-plugin-root-files && npm install && npm run build && npm link
 cd ../agent-plugins && npm install && npm link @gleanwork/pluginpack
 ```
-**Footgun:** `npm install` clobbers the link (replaces the symlink with the real 0.7.0). Re-run `npm link @gleanwork/pluginpack` after any install, or `npm test` will silently drop to baseline (vnext's `files`/MCP ignored — file counts fall to 66/62/53 instead of 69/65/56).
+**Footgun:** `npm install` clobbers the link (replaces the symlink with the real published `0.8.0`, which lacks the features). Re-run `npm link @gleanwork/pluginpack` after any install, or `npm test` will silently drop to baseline (vnext's `files`/MCP ignored — file counts fall to 66/62/53 instead of 69/65/56).
 
-**Before merging PR #3:** publish pluginpack 0.8.0, then bump agent-plugins `package.json` `@gleanwork/pluginpack` to `^0.8.0` and drop the `npm link` step.
+**Before merging PR #3:** merge pluginpack PR #11 and cut the next pluginpack release (`0.8.1`+), then bump agent-plugins `package.json` `@gleanwork/pluginpack` to that version (e.g. `^0.8.1`) and drop the `npm link` step. **Do not use `^0.8.0`** — it does not contain the features.
 
 ---
 
@@ -56,7 +56,7 @@ cd ../agent-plugins && npm install && npm link @gleanwork/pluginpack
 
 ```bash
 cd /path/to/agent-plugins
-npm link @gleanwork/pluginpack          # until 0.8.0 published (see release blocker)
+npm link @gleanwork/pluginpack          # until pluginpack 0.8.1+ published (see release blocker)
 npm test                                # prebuild → build:bundle → pluginpack build → validate
 npm run test:bundle                     # 189 server unit tests (vitest)
 npm run typecheck:bundle                # tsc --noEmit on the server
