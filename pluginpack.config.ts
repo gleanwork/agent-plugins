@@ -62,8 +62,8 @@ export default defineConfig({
       },
       plugins: {
         glean: {
-          from: ["glean-lib", "shared", "cursor", "glean-vnext"],
-          components: ["skills", "agents", "rules", "assets", "hooks"],
+          from: ["glean-lib", "shared", "cursor"],
+          components: ["skills", "agents", "rules", "assets"],
           displayName: "Glean",
           description:
             "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
