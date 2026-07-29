@@ -28,6 +28,18 @@ export function loadCredentials(): StoredCredentials | undefined {
   }
 }
 
+/**
+ * mtime of the credentials file (epoch ms), or undefined if unreadable.
+ * Cheap change probe: a single stat, no read + parse.
+ */
+export function credentialsMtimeMs(): number | undefined {
+  try {
+    return fs.statSync(credentialsFile()).mtimeMs;
+  } catch {
+    return undefined;
+  }
+}
+
 export function saveCredentials(tokens: unknown, clientInfo: unknown): void {
   try {
     const filePath = credentialsFile();
@@ -35,11 +47,13 @@ export function saveCredentials(tokens: unknown, clientInfo: unknown): void {
     fs.mkdirSync(dir, { recursive: true, mode: DIR_MODE });
     fs.chmodSync(dir, DIR_MODE);
     const data: StoredCredentials = { tokens, clientInfo };
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), {
+    // Temp-file + rename: concurrent readers never see a half-written store.
+    const tmpPath = `${filePath}.${process.pid}.tmp`;
+    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), {
       encoding: "utf-8",
       mode: FILE_MODE,
     });
-    fs.chmodSync(filePath, FILE_MODE);
+    fs.renameSync(tmpPath, filePath);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[auth] Failed to persist credentials: ${msg}`);

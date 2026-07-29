@@ -28,11 +28,15 @@ describe("GleanOAuthClientProvider", () => {
 
   beforeEach(() => {
     delete process.env.PLUGIN_DATA_DIR;
+    // Skip the rotation grace window by default so invalidation tests don't
+    // wait out the real 2s poll; the grace test overrides this explicitly.
+    process.env.GLEAN_ROTATION_GRACE_MS = "0";
     fs.rmSync(gleanDir, { recursive: true, force: true });
     vi.clearAllMocks();
   });
 
   afterEach(() => {
+    delete process.env.GLEAN_ROTATION_GRACE_MS;
     fs.rmSync(gleanDir, { recursive: true, force: true });
   });
 
@@ -72,6 +76,143 @@ describe("GleanOAuthClientProvider", () => {
       fs.readFileSync(path.join(gleanDir, "mcp-credentials.json"), "utf-8"),
     );
     expect(raw.tokens.access_token).toBe("new_tok");
+  });
+
+  // --- Cross-process sync: tokens() must pick up a sibling's rewrite. ---
+
+  const credFile = path.join(gleanDir, "mcp-credentials.json");
+
+  function writeCredFileNewer(tokens: unknown, clientInfo?: unknown): void {
+    fs.mkdirSync(gleanDir, { recursive: true });
+    fs.writeFileSync(credFile, JSON.stringify({ tokens, clientInfo }));
+    // Guarantee a strictly-newer mtime than any prior read, independent of
+    // filesystem timestamp resolution.
+    const future = new Date(Date.now() + 10_000);
+    fs.utimesSync(credFile, future, future);
+  }
+
+  it("tokens() adopts a newer token written by another process", () => {
+    fs.mkdirSync(gleanDir, { recursive: true });
+    fs.writeFileSync(
+      credFile,
+      JSON.stringify({
+        tokens: { access_token: "T0", refresh_token: "R0" },
+        clientInfo: { client_id: "cid" },
+      }),
+    );
+    const provider = new GleanOAuthClientProvider();
+    expect(provider.tokens()?.access_token).toBe("T0");
+
+    // Sibling refreshes: new access + rotated refresh token on disk.
+    writeCredFileNewer(
+      { access_token: "T1", refresh_token: "R1" },
+      { client_id: "cid" },
+    );
+
+    expect(provider.tokens()?.access_token).toBe("T1");
+    expect(provider.tokens()?.refresh_token).toBe("R1");
+  });
+
+  it("tokens() keeps the in-memory token when the file is deleted", () => {
+    fs.mkdirSync(gleanDir, { recursive: true });
+    fs.writeFileSync(
+      credFile,
+      JSON.stringify({ tokens: { access_token: "T0" }, clientInfo: {} }),
+    );
+    const provider = new GleanOAuthClientProvider();
+    expect(provider.tokens()?.access_token).toBe("T0");
+
+    // Transient disappearance / another process mid-write — don't self-evict.
+    fs.rmSync(credFile, { force: true });
+    expect(provider.tokens()?.access_token).toBe("T0");
+  });
+
+  it("tokens() does not adopt a rewrite that carries no tokens", () => {
+    fs.mkdirSync(gleanDir, { recursive: true });
+    fs.writeFileSync(
+      credFile,
+      JSON.stringify({ tokens: { access_token: "T0" }, clientInfo: {} }),
+    );
+    const provider = new GleanOAuthClientProvider();
+    expect(provider.tokens()?.access_token).toBe("T0");
+
+    // A client-only rewrite (tokens dropped) must not log us out in-memory.
+    writeCredFileNewer(undefined, { client_id: "cid" });
+    expect(provider.tokens()?.access_token).toBe("T0");
+  });
+
+  it("invalidateCredentials('tokens') adopts a sibling's newer token instead of wiping the store", async () => {
+    fs.mkdirSync(gleanDir, { recursive: true });
+    fs.writeFileSync(
+      credFile,
+      JSON.stringify({
+        tokens: { access_token: "T0", refresh_token: "R0" },
+        clientInfo: { client_id: "cid" },
+      }),
+    );
+    const provider = new GleanOAuthClientProvider();
+    expect(provider.tokens()?.access_token).toBe("T0");
+
+    // A sibling refreshed + rotated: fresh grant now on disk with a newer mtime.
+    writeCredFileNewer(
+      { access_token: "T1", refresh_token: "R1" },
+      { client_id: "cid" },
+    );
+
+    // The SDK calls this on invalid_grant. It must NOT clear — the failure was
+    // just our stale token; adopt the sibling's fresh one and leave it on disk.
+    await provider.invalidateCredentials("tokens");
+
+    expect(provider.tokens()?.access_token).toBe("T1");
+    expect(provider.tokens()?.refresh_token).toBe("R1");
+    const raw = JSON.parse(fs.readFileSync(credFile, "utf-8"));
+    expect(raw.tokens.access_token).toBe("T1"); // not clobbered with undefined
+  });
+
+  it("invalidateCredentials('tokens') clears when there is no newer token on disk", async () => {
+    const provider = new GleanOAuthClientProvider();
+    provider.saveTokens({ access_token: "T0", refresh_token: "R0" } as any);
+    expect(provider.tokens()?.access_token).toBe("T0");
+
+    // No sibling write since our snapshot → a genuine invalidation → clear.
+    await provider.invalidateCredentials("tokens");
+
+    expect(provider.tokens()).toBeUndefined();
+    const raw = JSON.parse(fs.readFileSync(credFile, "utf-8"));
+    expect(raw.tokens).toBeUndefined();
+  });
+
+  it("invalidateCredentials('tokens') adopts a token that lands during the grace window", async () => {
+    // The winner's write lands just after the loser's invalid_grant.
+    process.env.GLEAN_ROTATION_GRACE_MS = "2000";
+    const provider = new GleanOAuthClientProvider();
+    provider.saveTokens({ access_token: "T0", refresh_token: "R0" } as any);
+
+    const invalidation = provider.invalidateCredentials("tokens");
+    // Sibling's write lands mid-window.
+    setTimeout(() => {
+      writeCredFileNewer(
+        { access_token: "T1", refresh_token: "R1" },
+        { client_id: "cid" },
+      );
+    }, 150);
+    await invalidation;
+
+    expect(provider.tokens()?.access_token).toBe("T1");
+    const raw = JSON.parse(fs.readFileSync(credFile, "utf-8"));
+    expect(raw.tokens.access_token).toBe("T1"); // not clobbered with undefined
+  });
+
+  it("skips the grace window when no refresh token was held (no race possible)", async () => {
+    process.env.GLEAN_ROTATION_GRACE_MS = "5000";
+    const provider = new GleanOAuthClientProvider();
+    provider.saveTokens({ access_token: "T0" } as any); // no refresh_token
+
+    const start = Date.now();
+    await provider.invalidateCredentials("tokens");
+
+    expect(Date.now() - start).toBeLessThan(1000); // no 5s poll
+    expect(provider.tokens()).toBeUndefined();
   });
 
   it("saveClientInformation persists to disk", () => {

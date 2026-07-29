@@ -144,6 +144,7 @@ export async function createRemoteClient(
   serverUrl: string,
   opts: RemoteClientOptions,
   chatSessionId?: string,
+  authRetry = false,
 ): Promise<Client> {
   const authProvider = opts.authProvider;
 
@@ -189,19 +190,55 @@ export async function createRemoteClient(
     { capabilities: {} },
   );
 
+  // Snapshot to detect a sibling's refresh between connect and failure.
+  const accessTokenAtConnect = authProvider?.tokens()?.access_token;
+
   const transport = buildTransport(serverUrl, opts, chatSessionId);
 
   try {
     await client.connect(transport);
   } catch (error) {
-    if (error instanceof UnauthorizedError && authProvider?.authorizationUrl) {
-      pendingTransport = transport;
-      throw new AuthRequiredError(authProvider.authorizationUrl);
+    if (error instanceof UnauthorizedError && authProvider) {
+      const refreshedAccessToken = authProvider.tokens()?.access_token;
+      if (
+        !authRetry &&
+        refreshedAccessToken &&
+        refreshedAccessToken !== accessTokenAtConnect
+      ) {
+        console.error(
+          "[auth] Auth failed but a newer token is on disk " +
+            "(sibling refresh) — retrying once",
+        );
+        return createRemoteClient(serverUrl, opts, chatSessionId, true);
+      }
+      if (authProvider.authorizationUrl) {
+        pendingTransport = transport;
+        throw new AuthRequiredError(authProvider.authorizationUrl);
+      }
+    }
+    // Concurrent-refresh losers get errors the SDK rethrows raw (e.g. fosite
+    // invalid_request); retry once if a sibling's grant lands in the grace window.
+    if (
+      authProvider &&
+      !authRetry &&
+      isLikelyRefreshFailure(error) &&
+      (await authProvider.waitForSiblingRefresh(accessTokenAtConnect))
+    ) {
+      console.error(
+        "[auth] Refresh failed but a sibling refreshed — retrying with its token",
+      );
+      return createRemoteClient(serverUrl, opts, chatSessionId, true);
     }
     throw error;
   }
 
   return client;
+}
+
+// Match broadly; the caller's disk re-check gates the actual retry.
+function isLikelyRefreshFailure(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return /refresh|invalid_grant|invalid_request|oauth/i.test(msg);
 }
 
 export async function callRemoteTool(
