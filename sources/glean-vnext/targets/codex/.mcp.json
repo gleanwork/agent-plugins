@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "glean-local": {
+      "command": "node",
+      "args": ["./start.mjs"],
+      "cwd": ".",
+      "env": {
+        "ENABLE_HITL": "true",
+        "HITL_TIMEOUT_MS": "300000"
+      }
+    }
+  }
+}

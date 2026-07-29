@@ -34,8 +34,8 @@ export default defineConfig({
       },
       plugins: {
         glean: {
-          from: ["glean-lib", "shared", "claude"],
-          components: ["skills", "agents"],
+          from: ["glean-lib", "shared", "claude", "glean-vnext"],
+          components: ["skills", "agents", "hooks"],
           displayName: "Glean",
           description:
             "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
@@ -95,7 +95,7 @@ export default defineConfig({
       },
       plugins: {
         glean: {
-          from: ["glean-lib", "codex", "codex-assets"],
+          from: ["glean-lib", "codex", "codex-assets", "glean-vnext"],
           components: ["skills", "assets"],
           description:
             "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
