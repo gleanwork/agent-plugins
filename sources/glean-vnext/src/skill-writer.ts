@@ -40,7 +40,7 @@ type LogFn = (label: string, detail?: Record<string, unknown>) => void;
  * Remove cached skill subdirectories whose mtime is older than `maxAgeMs`.
  * `writeSkillsToDisk` rm-then-mkdir's a skill dir on every refetch, so dir
  * mtime is a reliable last-refresh signal. Safe to evict aggressively —
- * find_skills re-fetches on demand if the agent references a skill whose
+ * discover_skills_and_tools re-fetches on demand if the agent references a skill whose
  * files were removed.
  */
 export async function evictStaleSkills(
@@ -138,7 +138,7 @@ export function formatAvailableSkillsPrompt(index: SkillIndex[]): string {
     ].join("\n");
   });
 
-  // Usage instructions live in the find_skills tool description (advertised
+  // Usage instructions live in the discover_skills_and_tools tool description (advertised
   // once at tools/list) rather than being re-emitted in every response.
   return [
     "<available_skills>",
