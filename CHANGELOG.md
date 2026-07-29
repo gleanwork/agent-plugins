@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.2.0](https://github.com/gleanwork/agent-plugins/compare/v3.1.0...v3.2.0) (2026-07-29)
+
+### Features
+
+* do not emit glean-vnext for cursor (for now) ([b27f576](https://github.com/gleanwork/agent-plugins/commit/b27f576e4e1eacbaa25ef98f69a3d30cb8fec504))
+* fold glean-vnext runtime MCP server into the glean plugin ([92cf686](https://github.com/gleanwork/agent-plugins/commit/92cf68685f749829fc8c305c046b930045b838e5))
+* **using-glean:** document memory tool write support and memory_schema ([21f6dc5](https://github.com/gleanwork/agent-plugins/commit/21f6dc503341417e3fe26cd4b7e31fd3c35b72a5))
+
+### Documentation
+
+* correct pluginpack version target (0.8.0 shipped without features; needs 0.8.1+) ([8508c28](https://github.com/gleanwork/agent-plugins/commit/8508c2874931b9ce52773b6aadb43345d1fabcd3))
+* developer testing doc for glean-vnext integration ([da98442](https://github.com/gleanwork/agent-plugins/commit/da98442dc1cab51cac3476cfe94f178765941fce))
+* move glean-vnext developer testing doc out of the repo ([d90c624](https://github.com/gleanwork/agent-plugins/commit/d90c6248a3f3891752a9cab621b4351c2545b743))
+
 ## [3.1.0](https://github.com/gleanwork/agent-plugins/compare/v3.0.0...v3.1.0) (2026-07-14)
 
 ### Features
