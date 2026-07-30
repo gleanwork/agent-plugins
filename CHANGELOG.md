@@ -37,27 +37,3 @@
 * read App ID from variable or secret ([0f02ecc](https://github.com/gleanwork/agent-plugins/commit/0f02ecc4465e56e8eefef2a4e0f0c2044771be3c))
 * rev package.json on release via release-it ([9b36785](https://github.com/gleanwork/agent-plugins/commit/9b36785a38278d2e7f4f79f6ac52499ccec030a9))
 * use client-id for create-github-app-token v3 ([1f949a3](https://github.com/gleanwork/agent-plugins/commit/1f949a3e5a5acab9ef3ca7ca511307b55c50ce75))
-
-## [2.1.1](https://github.com/gleanwork/cursor-plugins/compare/v2.1.0...v2.1.1) (2026-03-17)
-
-## [2.1.0](https://github.com/gleanwork/cursor-plugins/compare/v2.0.0...v2.1.0) (2026-02-26)
-
-### Features
-
-* update plugin category and keywords for Cursor marketplace ([7991c0e](https://github.com/gleanwork/cursor-plugins/commit/7991c0eeb31bac044d7750973c36ee9973e34a02))
-
-## [2.0.0](https://github.com/gleanwork/cursor-plugins/compare/v1.0.0...v2.0.0) (2026-02-25)
-
-## 1.0.0 (2026-02-21)
-
-All notable changes to this project will be documented in this file.
-
-## 0.1.0 (Unreleased)
-
-### Features
-
-- **glean-core**: Foundation plugin with 6 skills, 2 rules, and 2 commands
-- **glean-search**: Enterprise search agent and command
-- **glean-code**: Cross-repo code exploration with 2 agents and 5 commands
-- **glean-people**: People finder agent and stakeholder discovery commands
-- Validation script and CI workflow
