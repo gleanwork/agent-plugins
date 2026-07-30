@@ -83,3 +83,8 @@ In this repo the skill markdown *is* the shipped product, so:
   it alters what users install, even when the change is "just docs".
 - Reserve `docs:` for repo-level documentation that doesn't ship (README,
   contributing notes, etc.).
+
+### Releasing
+
+See [`RELEASE.md`](./RELEASE.md) for how to cut a release and how that flows
+into the `claude-plugins`, `cursor-plugins`, and `codex-plugins` repos.
