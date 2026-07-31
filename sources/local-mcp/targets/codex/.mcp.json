@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "glean-local": {
+    "glean_plugin": {
       "command": "node",
       "args": ["./start.mjs"],
       "cwd": ".",

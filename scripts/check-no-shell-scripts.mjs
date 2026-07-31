@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// CI guard: fail if any shell/bash script is added under the glean-vnext
+// CI guard: fail if any shell/bash script is added under the local-mcp
 // source tree.
 //
-// Why: the glean-vnext plugin ships and runs on end-user machines, including
+// Why: the local-mcp plugin ships and runs on end-user machines, including
 // Windows, where POSIX shell (.sh / bash) is not available. We already
 // migrated the launcher from start.sh to start.mjs for exactly this reason.
 // Every executable helper the plugin relies on must be cross-platform, so the
@@ -15,9 +15,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Scope: the glean-vnext plugin source. Broaden this list if the rule should
+// Scope: the local-mcp plugin source. Broaden this list if the rule should
 // cover other source trees too.
-const SCAN_ROOTS = ["sources/glean-vnext"];
+const SCAN_ROOTS = ["sources/local-mcp"];
 // Never descend into generated/vendored trees.
 const SKIP_DIRS = new Set(["node_modules", "dist", ".git"]);
 
@@ -69,11 +69,11 @@ if (offenders.length > 0) {
     .sort()
     .join("\n");
   console.error(
-    `\n\u274c Shell/bash scripts are not allowed in the glean-vnext plugin source.\n\n` +
+    `\n\u274c Shell/bash scripts are not allowed in the local-mcp plugin source.\n\n` +
       `Found ${offenders.length} shell script(s):\n${rel}\n\n` +
       `The plugin runs on end-user machines including Windows, where POSIX shell\n` +
       `is unavailable. Use a cross-platform Node.js script instead:\n\n` +
-      `  - Write it as a .mjs file (see sources/glean-vnext/start.mjs).\n` +
+      `  - Write it as a .mjs file (see sources/local-mcp/start.mjs).\n` +
       `  - Use Node built-ins (node:fs, node:path, node:child_process) instead of\n` +
       `    shell utilities, and avoid shell-only syntax.\n` +
       `  - Invoke it with "node <script>.mjs" so it works on Windows/macOS/Linux.\n`,
