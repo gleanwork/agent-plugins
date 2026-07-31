@@ -44,19 +44,19 @@ A small set of popular tools is directly available, and no discovery is
 needed to use them. Discover is complementary and recommended if the
 direct tools cannot satisfy the user request end to end.
 
-### Calling `discover_skills_and_tools`
+### Calling `find_skills_and_tools`
 
 If no arguments were provided and the task can't be inferred from conversation
 context, ask the user what they'd like to do before proceeding.
 
-Call `discover_skills_and_tools` with the task descriptions.
+Call `find_skills_and_tools` with the task descriptions.
 
 Break the request into small, task-atomic queries — keep only the core action,
 dropping the surrounding context (recipients, timing, reasons, constraints) —
 and pass each as a separate entry in `queries`.
 
 ```
-discover_skills_and_tools({
+find_skills_and_tools({
   queries: [
     "<atomic sub-task 1>",
     "<atomic sub-task 2>"
@@ -66,7 +66,7 @@ discover_skills_and_tools({
 
 The response is an XML index of discovered skills with file paths.
 
-You can call `discover_skills_and_tools` multiple times — e.g. to discover skills for
+You can call `find_skills_and_tools` multiple times — e.g. to discover skills for
 individual sub-tasks as you work through a broad request.
 
 ## Step 2: Read Skill Instructions
