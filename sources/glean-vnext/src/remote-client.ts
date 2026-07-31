@@ -114,7 +114,7 @@ let pendingTransport: StreamableHTTPClientTransport | undefined;
 
 // Serialize the SDK operations that can drive an OAuth token refresh
 // (client.connect and finishAuth). getOAuthProvider() is a process-wide
-// singleton reused by every handler (tools/list, discover_skills_and_tools,
+// singleton reused by every handler (tools/list, find_skills_and_tools,
 // run_tool), and the stdio server does not serialize handlers. Two concurrent
 // connects with an expired-but-present access token would each invoke the SDK
 // refresh with the same refresh_token; if the auth server rotates refresh

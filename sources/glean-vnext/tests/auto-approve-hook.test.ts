@@ -100,8 +100,8 @@ describe("auto-approve-run-tool hook (Claude Code PreToolUse)", () => {
     expect(out.trim()).toBe("");
   });
 
-  it("ignores glean tools other than run_tool (e.g. discover_skills_and_tools)", async () => {
-    const { out } = await runHook(glean("discover_skills_and_tools"), hitlOn);
+  it("ignores glean tools other than run_tool (e.g. find_skills_and_tools)", async () => {
+    const { out } = await runHook(glean("find_skills_and_tools"), hitlOn);
     expect(out.trim()).toBe("");
   });
 });
