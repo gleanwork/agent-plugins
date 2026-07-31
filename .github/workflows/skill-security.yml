@@ -1,0 +1,40 @@
+name: AI Skill security
+on:
+  pull_request:
+    paths: ["skills/**", "sources/**", "roots/**", "scripts/**", "pluginpack.config.ts", "package*.json", ".github/scripts/run-skill-trust.mjs", ".github/workflows/skill-security.yml", "SECURITY-SCANNING.md"]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Build pinned skill-trust
+        env:
+          SKILL_TRUST_COMMIT: 331545d5c7ee85ed18234599b1b1451a33457ca4
+        run: |
+          git clone --no-checkout https://github.com/Ryan-focus/skill-trust.git "$RUNNER_TEMP/skill-trust"
+          git -C "$RUNNER_TEMP/skill-trust" checkout --detach "$SKILL_TRUST_COMMIT"
+          npm --prefix "$RUNNER_TEMP/skill-trust" ci --ignore-scripts
+          npm --prefix "$RUNNER_TEMP/skill-trust" run build
+      - name: Scan all Skills (audit only)
+        env:
+          SCAN_ENFORCE: "false"
+        run: node .github/scripts/run-skill-trust.mjs "$RUNNER_TEMP/skill-trust/dist/cli.js"
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: skill-trust-results
+          path: skill-trust-results/
+      - name: Upload SARIF to Code Scanning
+        if: always() && hashFiles('skill-trust-results/results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@717e230604b28efc38d8b4d3737d0611b16bc19a # v3.30.0
+        with:
+          sarif_file: skill-trust-results/results.sarif
