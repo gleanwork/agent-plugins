@@ -332,7 +332,7 @@ export async function handleRunTool(
   // Fail CLOSED when the tool's approval requirement is unknown. The gate used
   // to key on `toolMeta?.requires_approval`; a missing or unparseable tool JSON
   // (evicted by evictStaleSkills after a week, called from memory without a
-  // fresh discover_skills_and_tools, or corrupt) made that falsy, so the gate
+  // fresh find_skills_and_tools, or corrupt) made that falsy, so the gate
   // was skipped and — with the native prompt already suppressed via
   // readOnlyHint — the tool executed with ZERO approval. Only skip the gate
   // when we can positively confirm the tool is read-only.

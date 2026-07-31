@@ -80,7 +80,7 @@ const EMAIL_RESOLVE_FAILED_TEXT =
 
 const SETUP_NEEDED_ERROR =
   "Glean is not configured yet. Call the `setup` tool first to provide " +
-  "your Glean Server URL before using discover_skills_and_tools or run_tool.";
+  "your Glean Server URL before using find_skills_and_tools or run_tool.";
 
 // Returned by every non-setup tool when auth is missing or expired. The
 // agent should respond by calling `setup` (which drives the OAuth sign-in
@@ -165,7 +165,7 @@ function getRemoteClientOpts(): RemoteClientOptions {
 }
 
 const FIND_SKILLS_TOOL: Tool = {
-  name: "discover_skills_and_tools",
+  name: "find_skills_and_tools",
   annotations: { readOnlyHint: true },
   description:
     "Discover available Glean skills and their resolved tool dependencies. " +
@@ -183,11 +183,11 @@ const FIND_SKILLS_TOOL: Tool = {
     "index with usage instructions is returned. " +
     "If a returned skill lists no tools and its playbook does not let you " +
     "complete the task, first check whether tools already in scope can do it — " +
-    "tools from other skills in this response, tools from earlier discover_skills_and_tools " +
-    "calls, or tools you can already call directly. If none fit, call discover_skills_and_tools " +
+    "tools from other skills in this response, tools from earlier find_skills_and_tools " +
+    "calls, or tools you can already call directly. If none fit, call find_skills_and_tools " +
     "again with reworded or additional queries. " +
     "If a previously-cached skill file referenced from memory or instructions " +
-    "is missing on disk, call discover_skills_and_tools again to re-fetch it before failing. " +
+    "is missing on disk, call find_skills_and_tools again to re-fetch it before failing. " +
     "To use a returned skill: (1) pick the most relevant from the returned " +
     "skills; (2) read its SKILL.md for instructions; (3) read each tool's JSON " +
     "file (tools/TOOL_NAME.json) for the exact server_id, name, and inputSchema " +
@@ -215,7 +215,7 @@ const RUN_TOOL_TOOL: Tool = {
   name: "run_tool",
   description:
     "Execute a tool on a downstream MCP server. Before calling this tool, " +
-    "you MUST read the tool's JSON file from the discover_skills_and_tools output to get " +
+    "you MUST read the tool's JSON file from the find_skills_and_tools output to get " +
     "the exact server_id, tool_name, and input_schema. Pass arguments that match " +
     "the input_schema exactly — do not guess parameter names.",
   inputSchema: {
@@ -539,7 +539,7 @@ async function advanceSetup(): Promise<CallToolResult> {
             `Server URL: ${serverUrl}\n` +
             `Authenticated: yes\n` +
             `Remote tools: ${toolNames}\n\n` +
-            `You can now use discover_skills_and_tools, run_tool, and any of the listed ` +
+            `You can now use find_skills_and_tools, run_tool, and any of the listed ` +
             `remote tools.`,
         },
       ],
@@ -598,7 +598,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 
   switch (name) {
-    case "discover_skills_and_tools": {
+    case "find_skills_and_tools": {
       const serverUrl = resolveServerUrl();
       if (!serverUrl) {
         return {
@@ -634,7 +634,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           };
         }
         const msg = err instanceof Error ? err.message : String(err);
-        logLine("connect.backend-error", { label: "discover_skills_and_tools", msg });
+        logLine("connect.backend-error", { label: "find_skills_and_tools", msg });
         return {
           content: [
             {
@@ -654,9 +654,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return { content: [{ type: "text", text }] };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`discover_skills_and_tools: execution failed: ${msg}`);
+        console.error(`find_skills_and_tools: execution failed: ${msg}`);
         return {
-          content: [{ type: "text", text: `discover_skills_and_tools failed: ${msg}` }],
+          content: [{ type: "text", text: `find_skills_and_tools failed: ${msg}` }],
           isError: true,
         };
       } finally {
