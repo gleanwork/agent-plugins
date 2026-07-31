@@ -29,6 +29,9 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Guard against shell scripts (Windows cross-platform)
+        run: npm run check:no-shell
+
       - name: Typecheck server bundle
         run: npm run typecheck:bundle
 

@@ -13,6 +13,7 @@
     "build": "pluginpack build",
     "build:bundle": "node sources/glean-vnext/build.mjs",
     "clean": "pluginpack clean",
+    "check:no-shell": "node scripts/check-no-shell-scripts.mjs",
     "prune": "pluginpack prune",
     "typecheck:bundle": "tsc --noEmit -p sources/glean-vnext/tsconfig.json",
     "test:bundle": "vitest run --root sources/glean-vnext",
