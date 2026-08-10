@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "glean_plugin": {
+      "command": "node",
+      "args": ["./mcp/start.mjs"],
+      "cwd": ".",
+      "env": {
+        "ENABLE_HITL": "true",
+        "HITL_TIMEOUT_MS": "300000"
+      }
+    }
+  }
+}

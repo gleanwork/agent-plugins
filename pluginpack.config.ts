@@ -4,14 +4,6 @@ import pkg from "./package.json" with { type: "json" };
 export default defineConfig({
   name: "glean-plugins",
   version: pkg.version,
-  source: {
-    plugins: "sources",
-    skills: "skills",
-    rootPlugin: {
-      id: "glean-lib",
-      description: "Portable Glean skill library.",
-    },
-  },
   metadata: {
     author: {
       name: "Glean",
@@ -27,22 +19,22 @@ export default defineConfig({
     claude: {
       outDir: "dist/claude",
       version: pkg.version,
-      rootFiles: { "README.md": "roots/claude/README.md" },
+      repositoryFiles: "repositories/claude",
       manifest: {
         description:
           "Official Glean plugins for Claude Code — enterprise knowledge, search, people, code, and meetings.",
       },
       plugins: {
         glean: {
-          from: ["glean-lib", "shared", "claude", "local-mcp"],
-          components: ["skills", "agents", "hooks"],
+          source: "shared/glean",
+          overrides: "overrides/claude/glean",
           displayName: "Glean",
           description:
             "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
         },
         "glean-dev-docs": {
-          from: ["dev-docs"],
-          components: ["skills"],
+          source: "shared/glean-dev-docs",
+          include: ["skills", "static"],
           displayName: "Glean Developer Docs",
           description:
             "Search the public Glean developer documentation — APIs, SDKs, MCP, and integration guides for building with Glean.",
@@ -52,31 +44,58 @@ export default defineConfig({
     cursor: {
       outDir: "dist/cursor",
       version: pkg.version,
-      rootFiles: { "README.md": "roots/cursor/README.md" },
+      repositoryFiles: "repositories/cursor",
       manifest: {
         metadata: {
           description:
             "Official Glean plugins for Cursor — enterprise knowledge, code search, and people discovery.",
-          keywords: ["glean", "enterprise-search", "knowledge-management", "productivity", "workplace", "mcp"],
+          keywords: [
+            "glean",
+            "enterprise-search",
+            "knowledge-management",
+            "productivity",
+            "workplace",
+            "mcp",
+          ],
         },
       },
       plugins: {
         glean: {
-          from: ["glean-lib", "shared", "cursor"],
-          components: ["skills", "agents", "rules", "assets"],
+          source: "shared/glean",
+          overrides: "overrides/cursor/glean",
+          exclude: ["mcp", "hooks", "scripts"],
           displayName: "Glean",
           description:
             "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
           manifest: {
             logo: "assets/avatar.svg",
-            keywords: ["glean", "enterprise-search", "knowledge-management", "productivity", "workplace", "code-search", "people-search", "mcp"],
+            keywords: [
+              "glean",
+              "enterprise-search",
+              "knowledge-management",
+              "productivity",
+              "workplace",
+              "code-search",
+              "people-search",
+              "mcp",
+            ],
             category: "productivity",
-            tags: ["mcp", "enterprise", "search", "documents", "slack", "code", "people", "experts", "org"],
+            tags: [
+              "mcp",
+              "enterprise",
+              "search",
+              "documents",
+              "slack",
+              "code",
+              "people",
+              "experts",
+              "org",
+            ],
           },
         },
         "glean-dev-docs": {
-          from: ["dev-docs"],
-          components: ["skills"],
+          source: "shared/glean-dev-docs",
+          include: ["skills", "static"],
           displayName: "Glean Developer Docs",
           description:
             "Search the public Glean developer documentation — APIs, SDKs, MCP, and integration guides for building with Glean.",
@@ -85,18 +104,15 @@ export default defineConfig({
     },
     codex: {
       outDir: "dist/codex",
-      rootFiles: {
-        "README.md": "roots/codex/README.md",
-        LICENSE: "LICENSE",
-      },
+      repositoryFiles: "repositories/codex",
       manifest: {
         name: "glean-codex-plugins",
         interface: { displayName: "Glean for Codex" },
       },
       plugins: {
         glean: {
-          from: ["glean-lib", "codex", "codex-assets", "local-mcp"],
-          components: ["skills", "assets"],
+          source: "shared/glean",
+          overrides: "overrides/codex/glean",
           description:
             "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
           manifest: {
@@ -126,8 +142,9 @@ export default defineConfig({
           },
         },
         "glean-dev-docs": {
-          from: ["dev-docs", "codex-assets"],
-          components: ["skills", "assets"],
+          source: "shared/glean-dev-docs",
+          overrides: "overrides/codex/glean-dev-docs",
+          include: ["skills", "assets", "static"],
           description:
             "Search the public Glean developer documentation — APIs, SDKs, MCP, and integration guides for building with Glean.",
           manifest: {
