@@ -34,7 +34,7 @@ export default defineConfig({
       },
       plugins: {
         glean: {
-          from: ["glean-lib", "shared", "claude", "glean-vnext"],
+          from: ["glean-lib", "shared", "claude", "local-mcp"],
           components: ["skills", "agents", "hooks"],
           displayName: "Glean",
           description:
@@ -95,7 +95,7 @@ export default defineConfig({
       },
       plugins: {
         glean: {
-          from: ["glean-lib", "codex", "codex-assets", "glean-vnext"],
+          from: ["glean-lib", "codex", "codex-assets", "local-mcp"],
           components: ["skills", "assets"],
           description:
             "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",

@@ -1,7 +1,7 @@
 name: Test
 
 # Guard the source on every PR (and pushes to main): the transplanted
-# glean-vnext server suite + typecheck, and a full build/validate of all
+# local-mcp server suite + typecheck, and a full build/validate of all
 # targets. publish.yml only runs on release, so without this nothing catches
 # regressions before merge.
 on:

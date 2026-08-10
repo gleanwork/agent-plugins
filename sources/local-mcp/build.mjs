@@ -25,8 +25,8 @@ const nodeBuiltins = [
 ];
 
 await build({
-  entryPoints: ["sources/glean-vnext/src/index.ts"],
-  outfile: "sources/glean-vnext/dist/index.js",
+  entryPoints: ["sources/local-mcp/src/index.ts"],
+  outfile: "sources/local-mcp/dist/index.js",
   bundle: true,
   platform: "node",
   format: "esm",

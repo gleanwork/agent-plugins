@@ -33,7 +33,7 @@ try {
 const toolName = String(input.tool_name ?? "");
 const bareName = toolName.split("__").pop() ?? "";
 // Scope strictly to this plugin's run_tool — the tool name carries the glean
-// plugin/server prefix (e.g. mcp__plugin_glean-vnext_glean__run_tool).
+// plugin/server prefix (e.g. mcp__plugin_local-mcp_glean_plugin__run_tool).
 if (!toolName.includes("glean") || bareName !== "run_tool") {
   process.exit(0);
 }
@@ -44,11 +44,16 @@ let env = {};
 try {
   const root = process.env.CLAUDE_PLUGIN_ROOT ?? ".";
   const cfg = JSON.parse(fs.readFileSync(path.join(root, ".mcp.json"), "utf-8"));
-  // The server is named "glean-local" in the shipped .mcp.json (to avoid
-  // clashing with a user-connected remote "glean" server). Keep a fallback to
-  // the legacy "glean" key for backwards compatibility with older installs.
+  // The server is named "glean_plugin" in the shipped .mcp.json (namespaced
+  // under "glean" so it's recognizable alongside a user-connected remote
+  // Glean server, e.g. "glean_default"). Keep fallbacks to the prior names
+  // ("glean-local", then the original "glean") for backwards compatibility
+  // with older installs.
   env =
-    cfg?.mcpServers?.["glean-local"]?.env ?? cfg?.mcpServers?.glean?.env ?? {};
+    cfg?.mcpServers?.["glean_plugin"]?.env ??
+    cfg?.mcpServers?.["glean-local"]?.env ??
+    cfg?.mcpServers?.glean?.env ??
+    {};
 } catch {
   // No readable config: do nothing.
 }

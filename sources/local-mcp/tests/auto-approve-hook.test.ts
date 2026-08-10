@@ -28,7 +28,7 @@ async function runHook(
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "approve-hook-"));
   await fs.writeFile(
     path.join(root, ".mcp.json"),
-    JSON.stringify({ mcpServers: { "glean-local": { env } } }),
+    JSON.stringify({ mcpServers: { "glean_plugin": { env } } }),
   );
   // Isolate the marker under a throwaway CLAUDE_PLUGIN_DATA so the hook never
   // touches the developer's real ~/.glean during tests.
@@ -79,7 +79,7 @@ async function runHook(
   }
 }
 
-const glean = (tool: string) => `mcp__plugin_glean-vnext_glean__${tool}`;
+const glean = (tool: string) => `mcp__plugin_local-mcp_glean_plugin__${tool}`;
 const hitlOn = { ENABLE_HITL: "true" };
 const hitlOff = { ENABLE_HITL: "false" };
 const bypass = { permission_mode: "bypassPermissions", session_id: "sess-1" };
