@@ -19,7 +19,7 @@
     "test:bundle": "vitest run --root sources/local-mcp",
     "validate": "pluginpack validate --target claude --dir dist/claude && pluginpack validate --target cursor --dir dist/cursor && pluginpack validate --target codex --dir dist/codex",
     "test": "npm run build && npm run validate",
-    "prebuild": "node scripts/sync-changelog.mjs && npm run build:bundle",
+    "prebuild": "node scripts/sync-release-metadata.mjs && npm run build:bundle",
     "release": "release-it"
   },
   "dependencies": {
