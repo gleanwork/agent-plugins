@@ -58,8 +58,8 @@ release is what triggers the actual plugin distribution (below).
   1. Determine the next version from commits since the last tag (`feat` →
      minor, `fix` → patch, a `BREAKING CHANGE` footer → major).
   2. Regenerate `CHANGELOG.md`. Its `after:bump` hook then runs `npm run
-     build`, which syncs that changelog into `sources/claude`,
-     `sources/codex`, `sources/cursor`, `sources/dev-docs`, and rebuilds the
+     build`, which syncs that changelog into `shared/glean` and
+     `shared/glean-dev-docs`, then rebuilds the
      generated plugin output — all of which is included in the release
      commit.
   3. Commit as `chore: release v${version}`, tag `v${version}`, and push both
