@@ -20,14 +20,14 @@ release is what triggers the actual plugin distribution (below).
   `feat`/`fix` vs `docs` map to skill changes vs repo-only docs). Everything
   else (`chore:`, `refactor:`, `ci:`, `build:`, `test:`, ...) is fine to merge
   but is intentionally left out of `CHANGELOG.md`.
-- This repo currently allows merge commits, squash merges, *and* rebase
+- This repo currently allows merge commits, squash merges, _and_ rebase
   merges on PRs, so watch how a PR lands:
   - **Regular merge** — every individual commit is preserved, and
     conventional-changelog reads them straight from `git log`. The merge
     commit itself doesn't need a type prefix.
   - **Squash merge** — the PR collapses into one commit, using the squash
     commit message (GitHub defaults this to the PR title). That message is
-    now the *only* thing conventional-changelog sees for the whole PR, so the
+    now the _only_ thing conventional-changelog sees for the whole PR, so the
     PR title itself must be a valid Conventional Commit message.
 - Make sure you're releasing from an up-to-date `main` with a clean working
   tree and dependencies installed:
@@ -57,11 +57,12 @@ release is what triggers the actual plugin distribution (below).
 
   1. Determine the next version from commits since the last tag (`feat` →
      minor, `fix` → patch, a `BREAKING CHANGE` footer → major).
-  2. Regenerate `CHANGELOG.md`. Its `after:bump` hook then runs `npm run
-     build`, which syncs that changelog into `shared/glean` and
-     `shared/glean-dev-docs`, then rebuilds the
-     generated plugin output — all of which is included in the release
-     commit.
+  2. Bump both the root `package.json` and
+     `shared/glean/mcp/package.json` to the same version. Regenerate
+     `CHANGELOG.md`. Its `after:bump` hook then runs `npm run build`, which
+     syncs that changelog into `shared/glean` and `shared/glean-dev-docs`, then
+     rebuilds the generated plugin output — all of which is included in the
+     release commit.
   3. Commit as `chore: release v${version}`, tag `v${version}`, and push both
      to `main`.
   4. Create a GitHub Release from that tag.
@@ -84,7 +85,7 @@ Those PRs are regenerated and force-pushed on every sync — **don't push to
 them by hand or hand-edit their content**. Review and merge each one in its
 own repo once it looks right.
 
-If you need those PRs to pick up a fix made on `main` *without* cutting a new
+If you need those PRs to pick up a fix made on `main` _without_ cutting a new
 release, dispatch the workflow directly instead of running `release-it`
 again:
 

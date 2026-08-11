@@ -32,6 +32,9 @@ jobs:
       - name: Guard against shell scripts (Windows cross-platform)
         run: npm run check:no-shell
 
+      - name: Check release version targets
+        run: npm run check:release-version
+
       - name: Typecheck server bundle
         run: npm run typecheck:bundle
 
