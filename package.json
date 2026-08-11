@@ -14,12 +14,13 @@
     "build:bundle": "node shared/glean/mcp/build.mjs",
     "clean": "pluginpack clean",
     "check:no-shell": "node scripts/check-no-shell-scripts.mjs",
+    "check:release-version": "node scripts/check-release-version.mjs",
     "prune": "pluginpack prune",
     "typecheck:bundle": "tsc --noEmit -p shared/glean/mcp/tsconfig.json",
     "test:bundle": "vitest run --root shared/glean/mcp",
     "validate": "pluginpack validate --target claude --dir dist/claude && pluginpack validate --target cursor --dir dist/cursor && pluginpack validate --target codex --dir dist/codex",
     "test": "npm run build && npm run validate",
-    "prebuild": "node scripts/sync-release-metadata.mjs && npm run build:bundle",
+    "prebuild": "node scripts/sync-plugin-changelogs.mjs && npm run build:bundle",
     "release": "release-it"
   },
   "dependencies": {
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@gleanwork/pluginpack": "^0.11.0",
+    "@release-it/bumper": "^8.0.0",
     "@release-it/conventional-changelog": "^11.0.1",
     "@types/node": "^22.0.0",
     "esbuild": "^0.28.1",
