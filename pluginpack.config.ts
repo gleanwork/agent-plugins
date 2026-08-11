@@ -19,7 +19,7 @@ export default defineConfig({
     claude: {
       outDir: "dist/claude",
       version: pkg.version,
-      repositoryFiles: "repositories/claude",
+      repositoryFiles: "overrides/claude/root",
       manifest: {
         description:
           "Official Glean plugins for Claude Code — enterprise knowledge, search, people, code, and meetings.",
@@ -44,7 +44,7 @@ export default defineConfig({
     cursor: {
       outDir: "dist/cursor",
       version: pkg.version,
-      repositoryFiles: "repositories/cursor",
+      repositoryFiles: "overrides/cursor/root",
       manifest: {
         metadata: {
           description:
@@ -104,7 +104,7 @@ export default defineConfig({
     },
     codex: {
       outDir: "dist/codex",
-      repositoryFiles: "repositories/codex",
+      repositoryFiles: "overrides/codex/root",
       manifest: {
         name: "glean-codex-plugins",
         interface: { displayName: "Glean for Codex" },

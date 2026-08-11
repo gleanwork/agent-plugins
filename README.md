@@ -9,14 +9,14 @@ setup and capability differences.
 
 ## Layout
 
-| Path                           | What it is                                                                                                                           |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `shared/glean/`                | Canonical Glean plugin: skills, agents, static files, and the local MCP implementation.                                              |
-| `shared/glean-dev-docs/`       | Canonical source for the separate developer-docs plugin.                                                                             |
-| `overrides/<target>/<plugin>/` | Target-specific additions and replacements applied after the shared source.                                                          |
-| `repositories/<target>/`       | Files emitted at the root of each generated marketplace repository.                                                                  |
-| `pluginpack.config.ts`         | Build config — which shared source, overrides, and content kinds each target includes.                                               |
-| `dist/<target>/`               | **Generated** marketplace repositories. Don't edit them by hand — they're rebuilt from `shared/`, `overrides/`, and `repositories/`. |
+| Path                           | What it is                                                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `shared/glean/`                | Canonical Glean plugin: skills, agents, static files, and the local MCP implementation.                            |
+| `shared/glean-dev-docs/`       | Canonical source for the separate developer-docs plugin.                                                           |
+| `overrides/<target>/<plugin>/` | Target-specific plugin additions and replacements applied after the shared source.                                 |
+| `overrides/<target>/root/`     | Target-specific files emitted at the generated marketplace repository root.                                        |
+| `pluginpack.config.ts`         | Build config — which shared source, overrides, and content kinds each target includes.                             |
+| `dist/<target>/`               | **Generated** marketplace repositories. Don't edit them by hand — they're rebuilt from `shared/` and `overrides/`. |
 
 ## Plugins produced
 
