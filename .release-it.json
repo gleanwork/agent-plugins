@@ -14,6 +14,9 @@
     "after:bump": "npm run build"
   },
   "plugins": {
+    "@release-it/bumper": {
+      "out": "shared/glean/mcp/package.json"
+    },
     "@release-it/conventional-changelog": {
       "preset": {
         "name": "conventionalcommits",
