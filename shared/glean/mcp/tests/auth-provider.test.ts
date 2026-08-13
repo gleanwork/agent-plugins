@@ -28,6 +28,8 @@ describe("GleanOAuthClientProvider", () => {
 
   beforeEach(() => {
     delete process.env.PLUGIN_DATA_DIR;
+    delete process.env.CLAUDE_PLUGIN_DATA;
+    delete process.env.GLEAN_AUTH_DATA_DIR;
     // Skip the rotation grace window by default so invalidation tests don't
     // wait out the real 2s poll; the grace test overrides this explicitly.
     process.env.GLEAN_ROTATION_GRACE_MS = "0";
@@ -271,6 +273,24 @@ describe("GleanOAuthClientProvider", () => {
     await provider.invalidateCredentials("all");
     // A freshly registered client gets a fresh retry budget.
     expect(provider.abandonPendingSignIn()).toBe(true);
+  });
+
+  it("resetAuthentication keeps the client for account switching", () => {
+    const provider = new GleanOAuthClientProvider();
+    provider.saveTokens({ access_token: "tok", refresh_token: "refresh" } as any);
+    provider.saveClientInformation({ client_id: "cid" } as any);
+
+    provider.resetAuthentication(
+      "new-account@example.com",
+      "https://example.com/mcp/gateway/proxy",
+    );
+
+    expect(provider.tokens()).toBeUndefined();
+    expect(provider.clientInformation()).toEqual({ client_id: "cid" });
+    expect(provider.accountEmail()).toBe("new-account@example.com");
+    const raw = JSON.parse(fs.readFileSync(credFile, "utf-8"));
+    expect(raw.tokens).toBeUndefined();
+    expect(raw.clientInfo.client_id).toBe("cid");
   });
 
   it("saveClientInformation persists to disk", () => {

@@ -8,13 +8,17 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import path from "node:path";
 import fs from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import {
   AuthRequiredError,
   createRemoteClient,
   type RemoteClientOptions,
 } from "./remote-client.js";
-import { GleanOAuthClientProvider, openBrowser } from "./auth-provider.js";
+import {
+  GleanOAuthClientProvider,
+  normalizeAccountEmail,
+  openBrowser,
+} from "./auth-provider.js";
 import {
   startCallbackServer,
   closeCallbackServer,
@@ -31,7 +35,7 @@ import {
   saveServerUrl,
   clearServerUrl,
 } from "./url-config-store.js";
-import { clearCredentials } from "./token-store.js";
+import { clearCredentials, loadCredentials } from "./token-store.js";
 import {
   loadRemoteTools,
   saveRemoteTools,
@@ -45,6 +49,8 @@ import {
 } from "./tools/remote-passthrough.js";
 import { resolveSessionId } from "./session-id.js";
 import { resolveServerUrlFromEmail } from "./config-search.js";
+import { resolveDataDir } from "./data-dir.js";
+import { normalizeServerUrl } from "./server-url.js";
 import { PLUGIN_VERSION } from "./version.js";
 
 function readEnv(...keys: string[]): string | undefined {
@@ -61,11 +67,6 @@ function resolveServerUrl(): string | undefined {
   const fromEnv = readEnv("GLEAN_MCP_SERVER_URL");
   if (fromEnv) return fromEnv;
   return loadServerUrl();
-}
-
-function normalizeServerUrl(raw: string): string {
-  const parsed = new URL(raw);
-  return `${parsed.origin}/mcp/gateway/proxy`;
 }
 
 const SETUP_REQUIRED_TEXT =
@@ -93,8 +94,7 @@ const AUTH_REDIRECT_TO_SETUP_TEXT =
   "(no arguments) to sign in to Glean, then retry this tool.";
 
 function resolveLogPath(): string {
-  const base = process.env.PLUGIN_DATA_DIR || path.join(homedir(), ".glean");
-  return path.join(base, "glean-server.log");
+  return path.join(resolveDataDir(), "glean-server.log");
 }
 
 const LOG_PATH = resolveLogPath();
@@ -522,6 +522,11 @@ async function advanceSetup(): Promise<CallToolResult> {
     return { content: [{ type: "text", text: SETUP_REQUIRED_TEXT }] };
   }
 
+  const provider = getOAuthProvider();
+  if (provider.clientServerUrl() !== serverUrl) {
+    provider.setAccountContext(provider.accountEmail(), serverUrl);
+  }
+
   const conn = await connectWithSignIn(serverUrl);
   if (!conn.ok) return conn.result;
   const remoteClient = conn.client;
@@ -797,6 +802,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
 
         const previousUrl = loadServerUrl();
+        const stored = loadCredentials();
+        const requestedEmail = normalizeAccountEmail(email);
+        const urlChanged = previousUrl !== normalized;
+        const reusableClient =
+          !!stored?.clientInfo && stored.clientServerUrl === normalized;
+        // A new email on the same server is an account switch, not a new
+        // instance: clear only the grant and retain the server-scoped DCR
+        // client. This lets users change accounts without adding a client.
+        const accountChanged =
+          !!requestedEmail &&
+          !!stored?.tokens &&
+          stored.accountEmail !== requestedEmail;
+
         try {
           saveServerUrl(normalized);
         } catch (err) {
@@ -809,15 +827,30 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           };
         }
 
-        // Only wipe auth state when actually switching instances — a same-URL
-        // re-setup must keep the DCR client. Old URL's tool cache is kept.
-        const urlChanged = previousUrl !== normalized;
-        if (urlChanged) {
+        // A DCR client is scoped to its server. Reuse a retained client after
+        // setup changes only when its recorded server matches; otherwise
+        // remove it so the SDK registers for the new instance.
+        if (urlChanged && !reusableClient) {
           clearCredentials();
           oauthProvider = undefined;
         }
+
+        const provider = getOAuthProvider();
+        if (accountChanged) {
+          provider.resetAuthentication(requestedEmail, normalized);
+        } else {
+          provider.setAccountContext(
+            requestedEmail ?? provider.accountEmail(),
+            normalized,
+          );
+        }
         cachedRemoteTools = loadRemoteTools(normalized);
-        logLine("setup.configured", { serverUrl: normalized, urlChanged });
+        logLine("setup.configured", {
+          serverUrl: normalized,
+          urlChanged,
+          reusableClient,
+          accountChanged,
+        });
         // Fall through to advanceSetup, which will now find URL ✓ and try
         // to drive auth + tool fetch in the same call.
       }
