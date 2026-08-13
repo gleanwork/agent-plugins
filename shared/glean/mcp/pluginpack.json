@@ -1,0 +1,8 @@
+{
+  "files": {
+    "mcp/dist/index.js": "dist/index.js",
+    "mcp/start.mjs": "start.mjs",
+    "mcp/package.json": "package.json",
+    "skills/glean_run/SKILL.md": "skills/glean_run/SKILL.md"
+  }
+}

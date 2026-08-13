@@ -72,8 +72,8 @@ jobs:
       - name: PrePluginPack
         # The pluginpack-action runs `npx pluginpack diff/build` directly (not
         # `npm run build`), so the repo's prebuild esbuild step never fires.
-        # sources/glean-vnext/dist/index.js is gitignored, so build it here or
-        # pluginpack's additionalFiles source read fails for every target.
+        # shared/glean/mcp/dist/index.js is gitignored, so build it here or
+        # pluginpack's MCP shipping-file source read fails for every target.
         run: npm run build:bundle
 
       - name: Resolve pinned pluginpack version
