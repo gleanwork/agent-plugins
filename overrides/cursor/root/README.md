@@ -20,8 +20,8 @@ search, code exploration, and people discovery, right in your editor.
 
 Add the **`gleanwork/cursor-plugins`** marketplace in Cursor, then install the
 **`glean`** plugin (and **`glean-dev-docs`** if you build with Glean). Once
-installed, ask Cursor to "set up Glean" and the `glean` plugin's `connect-glean`
-skill walks you through connecting a Glean MCP server.
+installed, ask Cursor to "set up Glean". If it needs an MCP URL, follow the
+Glean MCP configuration steps in the `glean` plugin README.
 
 ## Plugins
 
