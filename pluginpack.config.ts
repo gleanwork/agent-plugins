@@ -63,7 +63,7 @@ export default defineConfig({
         glean: {
           source: "shared/glean",
           overrides: "overrides/cursor/glean",
-          exclude: ["mcp", "hooks", "scripts"],
+          exclude: ["hooks", "scripts"],
           displayName: "Glean",
           description:
             "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",

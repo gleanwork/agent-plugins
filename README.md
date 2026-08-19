@@ -49,10 +49,10 @@ frontmatter and optional `references/` loaded on demand — which Claude Code,
 Codex, Cursor, Gemini CLI, and Copilot all support. Shared skills ship to each
 target that includes them; target overrides handle host-specific differences.
 
-The Claude and Codex `glean` plugins bundle the local Glean MCP adapter under
-`shared/glean/mcp/`. Cursor excludes that capability and uses a separately
-connected Glean MCP server. MCP configuration lives in `mcp/config.json`, while
-`mcp/pluginpack.json` lists the implementation files that ship.
+The Claude, Cursor, and Codex `glean` plugins bundle the local Glean MCP
+adapter under `shared/glean/mcp/`. MCP configuration lives in
+`mcp/config.json`, while `mcp/pluginpack.json` lists the implementation files
+that ship.
 
 ## Develop
 
