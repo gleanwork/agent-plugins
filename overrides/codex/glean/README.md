@@ -35,7 +35,6 @@ per-skill install. They cover:
 
 - [Codex](https://developers.openai.com/codex) with plugin support
 - A Glean account with MCP access
-- A Glean account with MCP access
 
 ## Support
 

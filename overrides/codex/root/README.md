@@ -17,13 +17,14 @@ codex plugin add glean@glean-codex-plugins
 codex plugin add glean-dev-docs@glean-codex-plugins
 ```
 
-Before starting Codex, set up Glean by prompting the harness, for example:
-`Set up Glean for me`. Complete the browser OAuth flow when prompted, then start
-a new Codex task so the bundled skills and MCP tools are available.
+Start Codex and prompt the harness to set up Glean, for example: `Set up Glean
+for me`. Complete the browser OAuth flow when prompted.
 
-The **Glean developer docs** plugin uses a separate public MCP server. Run
-`codex mcp add glean-dev-docs --url https://developers.glean.com/mcp` if you
-installed that plugin.
+The **Glean developer docs** plugin uses a separate public MCP server. If you
+installed that plugin, add it before starting a new Codex task:
+`codex mcp add glean-dev-docs --url https://developers.glean.com/mcp`.
+
+Then start a new Codex task so the bundled skills and MCP tools are available.
 
 ## Plugins
 
