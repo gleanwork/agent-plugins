@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.3.0](https://github.com/gleanwork/agent-plugins/compare/v3.2.0...v3.3.0) (2026-08-11)
+
+### Features
+
+* migrate plugin sources to pluginpack 0.11 ([2280582](https://github.com/gleanwork/agent-plugins/commit/22805820a68cdaa8ec5d4e3a2b8558a19524e469))
+
+### Bug Fixes
+
+* bump local MCP version during releases ([6838cf6](https://github.com/gleanwork/agent-plugins/commit/6838cf6dbe102041dc0432422ea086376652d18b))
+* **vnext:** address security review feedback + add PR CI ([6ae5b6b](https://github.com/gleanwork/agent-plugins/commit/6ae5b6b2d8e4386b14bbd5946532a961ff09ecf4))
+
+### Documentation
+
+* add RELEASE.md describing this repo's release process ([99a8d91](https://github.com/gleanwork/agent-plugins/commit/99a8d911cf3367cd6024d01e7266a79e6a76fa31))
+
 ## [3.2.0](https://github.com/gleanwork/agent-plugins/compare/v3.1.0...v3.2.0) (2026-07-29)
 
 ### Features
