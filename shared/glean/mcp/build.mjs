@@ -2,54 +2,89 @@
 //
 // Why bundle: Cowork's plugin-install validator rejects zip entries whose
 // paths contain `@`, which appears in every scoped npm package's directory
-// name (`node_modules/@modelcontextprotocol/...`). Inlining every dep into
-// one `dist/index.js` means the shipped tree has no scoped-package paths.
-//
-// Bundle shape:
-//   - platform=node, format=esm so Node can load it with `node dist/index.js`
-//     and no `--experimental-*` flags, matching our package.json type:module
-//   - bundle=true with packages='bundled' so every import except Node
-//     builtins gets inlined
-//   - external: the `node:*` builtins (explicit for clarity; esbuild on
-//     platform=node treats bare `node:*` as external by default but we pin
-//     it so this doesn't regress silently)
-//   - no sourcemap or minification — the bundle is checked into git and
-//     should stay readable for debugging
+// name (`node_modules/@modelcontextprotocol/...`). Inlining every dependency
+// into one dist/index.js means the shipped tree has no scoped-package paths.
 
 import { build } from "esbuild";
 import { builtinModules } from "node:module";
+import { readFileSync } from "node:fs";
 
 const nodeBuiltins = [
   ...builtinModules,
   ...builtinModules.map((m) => `node:${m}`),
 ];
 
+const VERSION_FILES = [
+  "package.json",
+  "shared/glean/mcp/package.json",
+];
+const SEMVER_RE = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/;
+
+function pluginVersionFromPackages() {
+  const found = VERSION_FILES.map((file) => {
+    let raw;
+    try {
+      raw = JSON.parse(readFileSync(file, "utf-8"));
+    } catch (err) {
+      throw new Error(`build: cannot read ${file}: ${err.message}`);
+    }
+    const version = raw.version;
+    if (typeof version !== "string" || !SEMVER_RE.test(version)) {
+      throw new Error(
+        `build: ${file} must declare a plain x.y.z version, got ${JSON.stringify(version)}`,
+      );
+    }
+    return { file, version };
+  });
+
+  const versions = [...new Set(found.map((entry) => entry.version))];
+  if (versions.length !== 1) {
+    throw new Error(
+      `build: package versions disagree, so there is no single version to bake in:\n` +
+        found.map((entry) => `  ${entry.version}  ${entry.file}`).join("\n"),
+    );
+  }
+  return versions[0];
+}
+
+const pluginVersion = pluginVersionFromPackages();
+const OUTFILE = "shared/glean/mcp/dist/index.js";
+
 await build({
   entryPoints: ["shared/glean/mcp/src/index.ts"],
-  outfile: "shared/glean/mcp/dist/index.js",
+  outfile: OUTFILE,
   bundle: true,
   platform: "node",
   format: "esm",
   target: "node20",
-  // Not setting `packages` — esbuild only accepts `"external"` here, which
-  // would ship every dep as a runtime lookup (defeating the purpose). The
-  // default when `bundle:true` is to inline every import whose specifier
-  // isn't in `external`, which is exactly what we want.
+  define: {
+    __GLEAN_PLUGIN_VERSION__: JSON.stringify(pluginVersion),
+  },
+  // Not setting `packages` — the default with bundle:true inlines every
+  // non-external import, which is exactly what the shipped single-file server
+  // needs.
   external: nodeBuiltins,
-  // Some transitive deps (e.g. `yaml`) ship CJS that does `require("node:*")`
-  // at module-eval time. esbuild inlines that CJS under an ESM shim that
-  // does NOT provide a `require`, so imports blow up with "Dynamic require
-  // of X is not supported". Prepending a `createRequire`-based shim gives
-  // the inlined CJS a working `require` for Node builtins.
+  // Some transitive deps ship CJS that requires node:* at module-eval time.
+  // Provide a working require shim inside the ESM bundle for those builtins.
   banner: {
     js: `import { createRequire as __glean_createRequire } from "node:module";\nconst require = __glean_createRequire(import.meta.url);`,
   },
   minify: false,
   legalComments: "linked",
   logLevel: "info",
-  // The SDK and some transitive deps still ship CJS under their "require"
-  // export condition. We're emitting ESM and asking esbuild to resolve
-  // through each package's "import" condition first.
   conditions: ["import", "node", "default"],
   mainFields: ["module", "main"],
 });
+
+const bundled = readFileSync(OUTFILE, "utf-8");
+if (bundled.includes("__GLEAN_PLUGIN_VERSION__")) {
+  throw new Error(
+    `build: ${OUTFILE} still contains __GLEAN_PLUGIN_VERSION__; esbuild did not substitute it`,
+  );
+}
+if (!bundled.includes(JSON.stringify(pluginVersion))) {
+  throw new Error(
+    `build: ${OUTFILE} does not contain the version literal ${JSON.stringify(pluginVersion)}`,
+  );
+}
+console.log(`Baked plugin version ${pluginVersion} into ${OUTFILE}`);

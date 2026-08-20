@@ -3,7 +3,8 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { GleanOAuthClientProvider } from "./auth-provider.js";
-import { PLUGIN_VERSION } from "./version.js";
+import { pluginVersionString } from "./version.js";
+import { negotiationMeta, recordPolicyFromResult } from "./policy/session.js";
 
 const GLEAN_PLUGIN = "GLEAN_PLUGIN";
 
@@ -210,7 +211,7 @@ export async function createRemoteClient(
   }
 
   const client = new Client(
-    { name: "glean", version: PLUGIN_VERSION },
+    { name: "glean", version: pluginVersionString() },
     { capabilities: {} },
   );
 
@@ -234,11 +235,15 @@ export async function callRemoteTool(
   name: string,
   args: Record<string, unknown>,
 ): Promise<CallToolResult> {
-  // Pass an explicit timeout so the call isn't capped at the SDK's 60s default.
-  // `undefined` for resultSchema keeps the SDK's CallToolResultSchema default.
-  const result = await client.callTool({ name, arguments: args }, undefined, {
-    timeout: remoteToolTimeoutMs(),
-  });
+  // Every downstream tool call reports the negotiated context and records any
+  // capability policy returned by the remote. Keep the explicit timeout so
+  // long-running Glean tools are not capped at the SDK's 60s default.
+  const result = await client.callTool(
+    { name, arguments: args, ...negotiationMeta() },
+    undefined,
+    { timeout: remoteToolTimeoutMs() },
+  );
+  recordPolicyFromResult(result, `tools/call(${name})`);
   if (!("content" in result)) {
     return { content: [] };
   }
