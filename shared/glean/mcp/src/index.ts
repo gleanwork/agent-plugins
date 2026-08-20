@@ -20,11 +20,7 @@ import {
   closeCallbackServer,
 } from "./auth-callback-server.js";
 import { handleFindSkills } from "./tools/find-skills.js";
-import {
-  handleRunTool,
-  isCursorClient,
-  runToolAnnotations,
-} from "./tools/run-tool.js";
+import { handleRunTool, runToolAnnotations } from "./tools/run-tool.js";
 import { evictStaleSkills } from "./skill-writer.js";
 import {
   loadServerUrl,
@@ -45,7 +41,15 @@ import {
 } from "./tools/remote-passthrough.js";
 import { resolveSessionId } from "./session-id.js";
 import { resolveServerUrlFromEmail } from "./config-search.js";
-import { PLUGIN_VERSION } from "./version.js";
+import { pluginVersionString } from "./version.js";
+import {
+  decisionInForce,
+  initPolicySession,
+  policySummary,
+  protocolVersion,
+  setPolicyServerUrl,
+} from "./policy/session.js";
+import { advertisedTools, policyRefusal } from "./policy/enforce.js";
 
 function readEnv(...keys: string[]): string | undefined {
   for (const key of keys) {
@@ -127,9 +131,14 @@ function resolveSkillsBaseDir(): string {
 }
 
 const server = new Server(
-  { name: "glean", version: PLUGIN_VERSION },
+  { name: "glean", version: pluginVersionString() },
   { capabilities: { tools: { listChanged: true } } },
 );
+
+// Report the negotiated host/plugin context to the remote and enforce the
+// capability policy returned for this Glean instance.
+initPolicySession(server, logLine);
+setPolicyServerUrl(resolveServerUrl());
 
 let oauthProvider: GleanOAuthClientProvider | undefined;
 
@@ -293,31 +302,37 @@ const SETUP_TOOL: Tool = {
 };
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  const runTool: Tool = {
-    ...RUN_TOOL_TOOL,
-    annotations: runToolAnnotations(
-      process.env.ENABLE_HITL === "true",
-      !!server.getClientCapabilities()?.elicitation,
-      isCursorClient(server),
-    ),
-  };
-  const staticTools: Tool[] = [FIND_SKILLS_TOOL, runTool, SETUP_TOOL];
-
-  // One structured line on every return path, so "why don't my tools appear?"
-  // is answerable from the log alone: `static` is constant, `names` lists the
-  // dynamic tools we actually surfaced (freshly fetched or served from cache),
-  // and `state` names the path we took. The allow-list only ever drops tools
-  // outside our fixed set, so a missing allow-listed name (e.g. `chat`) means
-  // the backend never returned it. Only tool *names*, counts and the state
-  // tag are logged — never argument values, which can carry PII/secrets.
+  // Read the policy after any remote fetch: fetchAllowedRemoteTools records a
+  // policy returned by tools/list, so reading it earlier would be one request
+  // stale against the catalog we are about to advertise.
   const serve = (state: string, dynamic: Tool[]): { tools: Tool[] } => {
+    const decision = decisionInForce();
+    const runTool: Tool = {
+      ...RUN_TOOL_TOOL,
+      annotations: runToolAnnotations(
+        process.env.ENABLE_HITL === "true",
+        !!server.getClientCapabilities()?.elicitation,
+      ),
+    };
+    const { tools, withheld } = advertisedTools({
+      decision,
+      setupTool: SETUP_TOOL,
+      findSkillsTool: FIND_SKILLS_TOOL,
+      runTool,
+      promoted: dynamic,
+    });
+    const fromCatalog = new Set(dynamic.map((tool) => tool.name));
     logLine("tools-list.served", {
-      static: staticTools.length,
-      dynamic: dynamic.length,
-      names: dynamic.map((t) => t.name),
+      static: tools.filter((tool) => !fromCatalog.has(tool.name)).length,
+      dynamic: tools.filter((tool) => fromCatalog.has(tool.name)).length,
+      names: dynamic.map((tool) => tool.name),
+      withheld,
+      deactivated: decision.deactivated,
+      versionState: decision.versionState,
+      features: decision.features,
       state,
     });
-    return { tools: [...staticTools, ...dynamic] };
+    return { tools };
   };
 
   // Pre-auth gate: tokens() is sync. When unauthenticated (or unconfigured)
@@ -531,6 +546,20 @@ async function advanceSetup(): Promise<CallToolResult> {
     cachedRemoteTools = remoteTools;
     saveRemoteTools(serverUrl, remoteTools);
     const toolNames = remoteTools.map((t) => t.name).join(", ") || "(none)";
+    const decision = decisionInForce();
+    const closing = decision.deactivated
+      ? `This plugin version is not supported by your Glean instance, so only ` +
+        `\`setup\` is available. Upgrade the Glean plugin to restore the rest.`
+      : `You can now use ` +
+        [
+          ...(decision.features.metaTools
+            ? ["find_skills_and_tools", "run_tool"]
+            : []),
+          ...(decision.features.toolPromotion && remoteTools.length > 0
+            ? ["any of the listed remote tools"]
+            : []),
+        ].join(", ") +
+        `.`;
     return {
       content: [
         {
@@ -539,9 +568,9 @@ async function advanceSetup(): Promise<CallToolResult> {
             `Glean setup is complete.\n` +
             `Server URL: ${serverUrl}\n` +
             `Authenticated: yes\n` +
-            `Remote tools: ${toolNames}\n\n` +
-            `You can now use find_skills_and_tools, run_tool, and any of the listed ` +
-            `remote tools.`,
+            `Remote tools: ${toolNames}\n` +
+            `${policySummary().join("\n")}\n\n` +
+            closing,
         },
       ],
     };
@@ -568,6 +597,25 @@ async function advanceSetup(): Promise<CallToolResult> {
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args = {} } = request.params;
+
+  // Advertisement is advisory: a host may retain a stale tool list, so every
+  // policy withdrawal is also enforced at call time. Setup remains the
+  // recovery path and is always exempt from refusal.
+  const decision = decisionInForce();
+  const refusal = policyRefusal({
+    name,
+    decision,
+    promoted: REMOTE_TOOLS_ALLOWLIST,
+  });
+  if (refusal) {
+    logLine("policy.refused", {
+      tool: name,
+      deactivated: decision.deactivated,
+      versionState: decision.versionState,
+      features: decision.features,
+    });
+    return refusal;
+  }
 
   // Allow-listed remote tools (chat/search/read_document) — only valid once
   // setup has provided a server URL. Auth is handled by dispatchRemoteTool
@@ -712,7 +760,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       try {
         const skillsBaseDir = resolveSkillsBaseDir();
-        return await handleRunTool(remoteClient, server, skillsBaseDir, args);
+        return await handleRunTool(remoteClient, server, skillsBaseDir, args, {
+          fileArgs: decision.features.fileArgs,
+        });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`run_tool: execution failed: ${msg}`);
@@ -736,6 +786,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         clearRemoteTools();
         oauthProvider = undefined;
         cachedRemoteTools = [];
+        // Policy survives a user reset: only a new valid remote policy may
+        // replace a cached deactivation or feature restriction.
+        setPolicyServerUrl(undefined);
         logLine("setup.reset");
         // Fire-and-forget — tools list is shorter without the dynamic
         // surface; the host should re-fetch on its next idle cycle.
@@ -815,6 +868,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         clearCredentials();
         oauthProvider = undefined;
         cachedRemoteTools = loadRemoteTools(normalized);
+        setPolicyServerUrl(normalized);
         logLine("setup.configured", { serverUrl: normalized });
         // Fall through to advanceSetup, which will now find URL ✓ and try
         // to drive auth + tool fetch in the same call.
@@ -841,7 +895,8 @@ async function main() {
     logLine("evict-stale-skills.failed", { msg });
   }
 
-  const transport = new StdioServerTransport();
+  // Observe the negotiated MCP protocol revision from the initialize response.
+  const transport = protocolVersion.wrap(new StdioServerTransport());
   await server.connect(transport);
 }
 
