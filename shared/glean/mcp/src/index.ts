@@ -50,7 +50,11 @@ import {
   protocolVersion,
   setPolicyServerUrl,
 } from "./policy/session.js";
-import { advertisedTools, policyRefusal } from "./policy/enforce.js";
+import {
+  advertisedTools,
+  policyRefusal,
+  setupClosingLine,
+} from "./policy/enforce.js";
 
 function readEnv(...keys: string[]): string | undefined {
   for (const key of keys) {
@@ -366,7 +370,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   }
 
   try {
-    const remoteTools = await fetchAllowedRemoteTools(remoteClient);
+    // The host asked for this list and is about to receive it, so any policy learned here
+    // needs no notification -- this response IS the update.
+    const remoteTools = await fetchAllowedRemoteTools(remoteClient, {
+      hostReceivingList: true,
+    });
     cachedRemoteTools = remoteTools;
     saveRemoteTools(serverUrl, remoteTools);
     return serve("fetched", remoteTools);
@@ -545,21 +553,10 @@ async function advanceSetup(): Promise<CallToolResult> {
     const remoteTools = await fetchAllowedRemoteTools(remoteClient);
     cachedRemoteTools = remoteTools;
     saveRemoteTools(serverUrl, remoteTools);
-    const toolNames = remoteTools.map((t) => t.name).join(", ") || "(none)";
-    const decision = decisionInForce();
-    const closing = decision.deactivated
-      ? `This plugin version is not supported by your Glean instance, so only ` +
-        `\`setup\` is available. Upgrade the Glean plugin to restore the rest.`
-      : `You can now use ` +
-        [
-          ...(decision.features.metaTools
-            ? ["find_skills_and_tools", "run_tool"]
-            : []),
-          ...(decision.features.toolPromotion && remoteTools.length > 0
-            ? ["any of the listed remote tools"]
-            : []),
-        ].join(", ") +
-        `.`;
+    const closing = setupClosingLine({
+      decision: decisionInForce(),
+      promoted: remoteTools.map((t) => t.name),
+    });
     return {
       content: [
         {
@@ -568,7 +565,6 @@ async function advanceSetup(): Promise<CallToolResult> {
             `Glean setup is complete.\n` +
             `Server URL: ${serverUrl}\n` +
             `Authenticated: yes\n` +
-            `Remote tools: ${toolNames}\n` +
             `${policySummary().join("\n")}\n\n` +
             closing,
         },
