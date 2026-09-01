@@ -28,15 +28,12 @@ describe("GleanOAuthClientProvider", () => {
 
   beforeEach(() => {
     delete process.env.PLUGIN_DATA_DIR;
-    // Skip the rotation grace window by default so invalidation tests don't
-    // wait out the real 2s poll; the grace test overrides this explicitly.
-    process.env.GLEAN_ROTATION_GRACE_MS = "0";
     fs.rmSync(gleanDir, { recursive: true, force: true });
     vi.clearAllMocks();
   });
 
   afterEach(() => {
-    delete process.env.GLEAN_ROTATION_GRACE_MS;
+    vi.useRealTimers();
     fs.rmSync(gleanDir, { recursive: true, force: true });
   });
 
@@ -82,16 +79,12 @@ describe("GleanOAuthClientProvider", () => {
 
   const credFile = path.join(gleanDir, "mcp-credentials.json");
 
-  function writeCredFileNewer(tokens: unknown, clientInfo?: unknown): void {
+  function writeCredFile(tokens: unknown, clientInfo?: unknown): void {
     fs.mkdirSync(gleanDir, { recursive: true });
     fs.writeFileSync(credFile, JSON.stringify({ tokens, clientInfo }));
-    // Guarantee a strictly-newer mtime than any prior read, independent of
-    // filesystem timestamp resolution.
-    const future = new Date(Date.now() + 10_000);
-    fs.utimesSync(credFile, future, future);
   }
 
-  it("tokens() adopts a newer token written by another process", () => {
+  it("tokens() adopts a token written by another process", () => {
     fs.mkdirSync(gleanDir, { recursive: true });
     fs.writeFileSync(
       credFile,
@@ -102,12 +95,15 @@ describe("GleanOAuthClientProvider", () => {
     );
     const provider = new GleanOAuthClientProvider();
     expect(provider.tokens()?.access_token).toBe("T0");
+    const originalMtime = fs.statSync(credFile).mtime;
 
     // Sibling refreshes: new access + rotated refresh token on disk.
-    writeCredFileNewer(
+    writeCredFile(
       { access_token: "T1", refresh_token: "R1" },
       { client_id: "cid" },
     );
+    // The provider must not rely on mtime to observe this rewrite.
+    fs.utimesSync(credFile, originalMtime, originalMtime);
 
     expect(provider.tokens()?.access_token).toBe("T1");
     expect(provider.tokens()?.refresh_token).toBe("R1");
@@ -137,11 +133,11 @@ describe("GleanOAuthClientProvider", () => {
     expect(provider.tokens()?.access_token).toBe("T0");
 
     // A client-only rewrite (tokens dropped) must not log us out in-memory.
-    writeCredFileNewer(undefined, { client_id: "cid" });
+    writeCredFile(undefined, { client_id: "cid" });
     expect(provider.tokens()?.access_token).toBe("T0");
   });
 
-  it("invalidateCredentials('tokens') adopts a sibling's newer token instead of wiping the store", async () => {
+  it("invalidateCredentials('tokens') adopts a sibling's token instead of wiping the store", async () => {
     fs.mkdirSync(gleanDir, { recursive: true });
     fs.writeFileSync(
       credFile,
@@ -153,8 +149,8 @@ describe("GleanOAuthClientProvider", () => {
     const provider = new GleanOAuthClientProvider();
     expect(provider.tokens()?.access_token).toBe("T0");
 
-    // A sibling refreshed + rotated: fresh grant now on disk with a newer mtime.
-    writeCredFileNewer(
+    // A sibling refreshed + rotated: fresh grant is now on disk.
+    writeCredFile(
       { access_token: "T1", refresh_token: "R1" },
       { client_id: "cid" },
     );
@@ -175,7 +171,10 @@ describe("GleanOAuthClientProvider", () => {
     expect(provider.tokens()?.access_token).toBe("T0");
 
     // No sibling write since our snapshot → a genuine invalidation → clear.
-    await provider.invalidateCredentials("tokens");
+    vi.useFakeTimers();
+    const invalidation = provider.invalidateCredentials("tokens");
+    await vi.advanceTimersByTimeAsync(2000);
+    await invalidation;
 
     expect(provider.tokens()).toBeUndefined();
     const raw = JSON.parse(fs.readFileSync(credFile, "utf-8"));
@@ -184,14 +183,13 @@ describe("GleanOAuthClientProvider", () => {
 
   it("invalidateCredentials('tokens') adopts a token that lands during the grace window", async () => {
     // The winner's write lands just after the loser's invalid_grant.
-    process.env.GLEAN_ROTATION_GRACE_MS = "2000";
     const provider = new GleanOAuthClientProvider();
     provider.saveTokens({ access_token: "T0", refresh_token: "R0" } as any);
 
     const invalidation = provider.invalidateCredentials("tokens");
     // Sibling's write lands mid-window.
     setTimeout(() => {
-      writeCredFileNewer(
+      writeCredFile(
         { access_token: "T1", refresh_token: "R1" },
         { client_id: "cid" },
       );
@@ -204,7 +202,6 @@ describe("GleanOAuthClientProvider", () => {
   });
 
   it("skips the grace window when no refresh token was held (no race possible)", async () => {
-    process.env.GLEAN_ROTATION_GRACE_MS = "5000";
     const provider = new GleanOAuthClientProvider();
     provider.saveTokens({ access_token: "T0" } as any); // no refresh_token
 
