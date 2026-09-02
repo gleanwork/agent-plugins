@@ -228,6 +228,28 @@ async function buildApprovalMessage(
   return message.join("\n");
 }
 
+// This follow-up only controls approval for future calls.
+const alwaysAllowFollowUpTimeoutMs = 5_000;
+
+async function requestAlwaysAllowFollowUp(
+  mcpServer: Server,
+  toolName: string,
+): Promise<boolean> {
+  try {
+    const result = await mcpServer.elicitInput(
+      {
+        message: `Always allow ${toolName} for future calls?`,
+        // Empty form preserves the host-native Yes/No actions.
+        requestedSchema: { type: "object", properties: {} } as any,
+      },
+      { timeout: alwaysAllowFollowUpTimeoutMs },
+    );
+    return result.action === "accept";
+  } catch {
+    return false;
+  }
+}
+
 // A WeakSet so a short-lived server in tests doesn't leak,
 // and so the burn happens exactly once per server instance.
 const elicitationIdPrimed = new WeakSet<object>();
@@ -352,7 +374,7 @@ export async function getToolApproval(
 ): Promise<boolean> {
   let result: CallToolResult;
   try {
-    result = await callRemoteTool(remoteClient, "get-tool-approval", {
+    result = await callRemoteTool(remoteClient, "get_tool_approval", {
       server_id: serverId,
       tool_name: toolName,
     });
@@ -381,7 +403,7 @@ function approvalLookupFailure(
   error: unknown,
 ): CallToolResult {
   const detail = error instanceof Error ? error.message : String(error);
-  console.error(`[get-tool-approval] ${toolName}: ${detail}`);
+  console.error(`[get_tool_approval] ${toolName}: ${detail}`);
   return {
     content: [
       {
@@ -503,6 +525,25 @@ export async function handleRunTool(
               },
             ],
           };
+        }
+
+        const alwaysAllow = await requestAlwaysAllowFollowUp(
+          mcpServer,
+          toolName,
+        );
+        if (alwaysAllow) {
+          try {
+            await callRemoteTool(remoteClient, "set_tool_approval", {
+              server_id: serverId,
+              tool_name: toolName,
+              value: "ALWAYS_ALLOWED",
+            });
+          } catch (err) {
+            const detail = err instanceof Error ? err.message : String(err);
+            console.error(
+              `[set_tool_approval] failed to persist "${toolName}" to Glean: ${detail}`,
+            );
+          }
         }
       } catch (err) {
         // Fail CLOSED. An approval gate that executes the action when the

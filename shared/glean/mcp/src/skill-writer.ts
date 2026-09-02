@@ -36,7 +36,7 @@ function parseFrontmatter(content: string): Record<string, string> {
 
 /**
  * Keep approval requirements out of the local skill cache. The remote
- * get-tool-approval lookup is the only source of truth, so a stale or hand-edited
+ * get_tool_approval lookup is the only source of truth, so a stale or hand-edited
  * skill file must not retain a second approval setting for the plugin or the model
  * to read. Other tool metadata, especially inputSchema, remains cached for argument
  * shaping and prompt construction.

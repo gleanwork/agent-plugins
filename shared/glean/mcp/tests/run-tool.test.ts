@@ -258,7 +258,7 @@ function makeRemote(opts: {
     content: [{ type: "text", text: "ok" }],
   });
   const callTool = vi.fn().mockImplementation(async (request: { name: string }) => {
-    if (request.name === "get-tool-approval") {
+    if (request.name === "get_tool_approval") {
       if (opts.approvalError) throw opts.approvalError;
       return opts.approvalResult ?? {
         content: [
@@ -431,8 +431,8 @@ describe("handleRunTool (HITL)", () => {
 
     await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
 
-    // Cursor gets the same single gate as other elicitation-capable hosts.
-    expect(elicit).toHaveBeenCalledTimes(1);
+    // Cursor gets the same initial gate plus always-allow follow-up as other hosts.
+    expect(elicit).toHaveBeenCalledTimes(2);
     expect(remote.downstreamCall).toHaveBeenCalledTimes(1);
   });
 
@@ -712,7 +712,7 @@ describe("handleRunTool (HITL)", () => {
     // Ping fired exactly once for this server, and it is a ping.
     expect(request).toHaveBeenCalledTimes(1);
     expect(request.mock.calls[0][0]).toEqual({ method: "ping" });
-    expect(elicit).toHaveBeenCalledTimes(2);
+    expect(elicit).toHaveBeenCalledTimes(4);
   });
 
   it("does not ping when the remote says the tool requires no approval", async () => {
@@ -896,9 +896,9 @@ describe("handleRunTool (HITL)", () => {
 
     expect(server.elicitInput).not.toHaveBeenCalled();
     expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toEqual([
-      "get-tool-approval",
+      "get_tool_approval",
       "run_tool",
-      "get-tool-approval",
+      "get_tool_approval",
       "run_tool",
     ]);
     expect(remote.callTool.mock.calls[0][0].arguments).toEqual({
@@ -910,7 +910,7 @@ describe("handleRunTool (HITL)", () => {
   it("prompts when the remote requires approval even if local metadata says false", async () => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote({ requiresApproval: true });
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = acceptThenDecline();
     const server = makeServer({ elicitation: true, elicit });
     await writeToolJson(tmpDir, "remote_required_tool", { requires_approval: false });
 
@@ -922,11 +922,41 @@ describe("handleRunTool (HITL)", () => {
       ALL_ON,
     );
 
-    expect(elicit).toHaveBeenCalledTimes(1);
+    expect(elicit).toHaveBeenCalledTimes(2);
     expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toEqual([
-      "get-tool-approval",
+      "get_tool_approval",
       "run_tool",
     ]);
+  });
+
+  it("persists an explicit always-allow decision before running the tool", async () => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote();
+    const elicit = vi
+      .fn()
+      .mockResolvedValueOnce({ action: "accept" })
+      .mockResolvedValueOnce({ action: "accept" });
+    const server = makeServer({ elicitation: true, elicit });
+    await writeToolJson(tmpDir, "always_tool", { requires_approval: true });
+
+    await handleRunTool(
+      remote,
+      server,
+      tmpDir,
+      { ...baseArgs, tool_name: "always_tool" },
+      ALL_ON,
+    );
+
+    expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toEqual([
+      "get_tool_approval",
+      "set_tool_approval",
+      "run_tool",
+    ]);
+    expect(remote.callTool.mock.calls[1][0].arguments).toEqual({
+      server_id: baseArgs.server_id,
+      tool_name: "always_tool",
+      value: "ALWAYS_ALLOWED",
+    });
   });
 
   it("fails closed when the remote approval lookup is malformed", async () => {
@@ -944,7 +974,7 @@ describe("handleRunTool (HITL)", () => {
     );
     expect(server.elicitInput).not.toHaveBeenCalled();
     expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toEqual([
-      "get-tool-approval",
+      "get_tool_approval",
     ]);
   });
 
@@ -991,7 +1021,7 @@ describe("handleRunTool (HITL)", () => {
 
     await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
 
-    expect(elicit).toHaveBeenCalledTimes(1);
+    expect(elicit).toHaveBeenCalledTimes(2);
     expect(remote.downstreamCall).toHaveBeenCalledTimes(1);
   });
 
@@ -1007,7 +1037,7 @@ describe("handleRunTool (HITL)", () => {
 
     await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
 
-    expect(elicit).toHaveBeenCalledTimes(1);
+    expect(elicit).toHaveBeenCalledTimes(2);
   });
 
   it("ignores a bypass marker written for a different session (no cross-session leak)", async () => {
@@ -1023,7 +1053,7 @@ describe("handleRunTool (HITL)", () => {
 
     await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
 
-    expect(elicit).toHaveBeenCalledTimes(1); // gate preserved for THIS session
+    expect(elicit).toHaveBeenCalledTimes(2); // initial gate + always-allow follow-up
   });
 });
 
