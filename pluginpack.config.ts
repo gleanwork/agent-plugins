@@ -22,7 +22,7 @@ export default defineConfig({
       repositoryFiles: "overrides/claude/root",
       manifest: {
         description:
-          "Official Glean plugins for Claude Code — enterprise knowledge, search, people, code, and meetings.",
+          "Official Glean plugins for Claude — enterprise knowledge, search, people, code, and meetings.",
       },
       plugins: {
         glean: {
