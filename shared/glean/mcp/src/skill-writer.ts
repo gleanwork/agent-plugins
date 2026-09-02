@@ -34,6 +34,33 @@ function parseFrontmatter(content: string): Record<string, string> {
   return result;
 }
 
+/**
+ * Keep approval requirements out of the local skill cache. The remote
+ * get-tool-approval lookup is the only source of truth, so a stale or hand-edited
+ * skill file must not retain a second approval setting for the plugin or the model
+ * to read. Other tool metadata, especially inputSchema, remains cached for argument
+ * shaping and prompt construction.
+ */
+function sanitizeSkillFile(filePath: string, text: string): string {
+  if (!/^tools[\\/]\S+\.json$/.test(filePath)) return text;
+
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return text;
+    }
+    const { requires_approval: _ignored, ...metadata } = parsed as Record<
+      string,
+      unknown
+    >;
+    return JSON.stringify(metadata);
+  } catch {
+    // Leave malformed/non-object tool files alone; run_tool will not use them as
+    // approval state, and preserving the original content keeps diagnostics intact.
+    return text;
+  }
+}
+
 type LogFn = (label: string, detail?: Record<string, unknown>) => void;
 
 /**
@@ -99,8 +126,10 @@ export async function writeSkillsToDisk(
         continue;
       }
       await fs.mkdir(path.dirname(fullPath), { recursive: true });
-      const text =
-        typeof content === "string" ? content : JSON.stringify(content);
+      const text = sanitizeSkillFile(
+        filePath,
+        typeof content === "string" ? content : JSON.stringify(content),
+      );
       await fs.writeFile(fullPath, text, "utf-8");
       writtenFiles.push(fullPath);
     }

@@ -18,12 +18,6 @@ const DEFAULT_FILE_ARG_MAX_BYTES = 5 * 1024 * 1024;
 // pass an explicit (longer) value the prompt errors out from under the user.
 const defaultHitlTimeoutMs = 300_000;
 
-// Skip repeat prompts until discovery reflects the persisted grant.
-const sessionApproved = new Set<string>();
-function approvalKey(serverId: string, toolName: string): string {
-  return JSON.stringify([serverId, toolName]);
-}
-
 export class FileArgsError extends Error {
   constructor(message: string) {
     super(message);
@@ -166,7 +160,6 @@ export async function resolveFileArgs(
 }
 
 interface ToolMetadata {
-  requires_approval?: boolean;
   name?: string;
   description?: string;
   server_id?: string;
@@ -233,28 +226,6 @@ async function buildApprovalMessage(
     }
   }
   return message.join("\n");
-}
-
-// This follow-up only controls approval for future calls.
-const alwaysAllowFollowUpTimeoutMs = 5_000;
-
-async function requestAlwaysAllowFollowUp(
-  mcpServer: Server,
-  toolName: string,
-): Promise<boolean> {
-  try {
-    const result = await mcpServer.elicitInput(
-      {
-        message: `Always allow ${toolName} for future calls?`,
-        // Empty form preserves the host-native Yes/No actions.
-        requestedSchema: { type: "object", properties: {} } as any,
-      },
-      { timeout: alwaysAllowFollowUpTimeoutMs },
-    );
-    return result.action === "accept";
-  } catch {
-    return false;
-  }
 }
 
 // A WeakSet so a short-lived server in tests doesn't leak,
@@ -340,6 +311,91 @@ export interface RunToolPolicy {
   fileArgs: boolean;
 }
 
+class ToolApprovalError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ToolApprovalError";
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function approvalResponsePayload(result: CallToolResult): unknown {
+  const structured = (result as CallToolResult & {
+    structuredContent?: unknown;
+  }).structuredContent;
+  if (structured !== undefined) return structured;
+
+  const text = result.content.find((item) => item.type === "text");
+  if (!text || text.type !== "text") return undefined;
+  try {
+    return JSON.parse(text.text);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Ask the remote control plane whether this downstream tool requires approval.
+ *
+ * This is deliberately a per-call lookup. The answer is not read from skill files,
+ * stored in this process, or persisted locally. A missing, malformed, or failed
+ * response fails closed so the downstream `run_tool` call cannot proceed without a
+ * current remote decision.
+ */
+export async function getToolApproval(
+  remoteClient: Client,
+  serverId: string,
+  toolName: string,
+): Promise<boolean> {
+  let result: CallToolResult;
+  try {
+    result = await callRemoteTool(remoteClient, "get-tool-approval", {
+      server_id: serverId,
+      tool_name: toolName,
+    });
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new ToolApprovalError(`remote lookup failed: ${detail}`);
+  }
+
+  if (result.isError) {
+    const text = result.content.find((item) => item.type === "text");
+    const detail = text?.type === "text" ? text.text : "remote lookup returned an error";
+    throw new ToolApprovalError(detail);
+  }
+
+  const payload = approvalResponsePayload(result);
+  if (!isRecord(payload) || typeof payload.requires_approval !== "boolean") {
+    throw new ToolApprovalError(
+      "remote response did not contain boolean requires_approval",
+    );
+  }
+  return payload.requires_approval;
+}
+
+function approvalLookupFailure(
+  toolName: string,
+  error: unknown,
+): CallToolResult {
+  const detail = error instanceof Error ? error.message : String(error);
+  console.error(`[get-tool-approval] ${toolName}: ${detail}`);
+  return {
+    content: [
+      {
+        type: "text",
+        text:
+          `Could not determine whether ${toolName} requires approval from the ` +
+          `remote settings. The action was NOT executed. Retry when the approval ` +
+          `settings are available.`,
+      },
+    ],
+    isError: true,
+  };
+}
+
 export async function handleRunTool(
   remoteClient: Client,
   mcpServer: Server,
@@ -359,9 +415,9 @@ export async function handleRunTool(
     };
   }
 
-  // Load the downstream tool's metadata once, up front: its inputSchema drives
-  // file_args JSON-parsing (object/array params) and its requires_approval
-  // drives the HITL gate. Both paths must see it regardless of ENABLE_HITL.
+  // Load the downstream tool's metadata only for inputSchema. Approval is not
+  // taken from this file; it is fetched from the remote control plane below for
+  // every attempted downstream call.
   const toolMeta = await findToolJson(skillsBaseDir, toolName);
 
   // Refuse before reading any model-supplied path. Disabled file_args must be
@@ -397,18 +453,14 @@ export async function handleRunTool(
     throw err;
   }
 
+  let requiresApproval: boolean;
+  try {
+    requiresApproval = await getToolApproval(remoteClient, serverId, toolName);
+  } catch (err) {
+    return approvalLookupFailure(toolName, err);
+  }
+
   const hitlEnabled = process.env.ENABLE_HITL === "true";
-  // Fail CLOSED when the tool's approval requirement is unknown. The gate used
-  // to key on `toolMeta?.requires_approval`; a missing or unparseable tool JSON
-  // (evicted by evictStaleSkills after a week, called from memory without a
-  // fresh find_skills_and_tools, or corrupt) made that falsy, so the gate
-  // was skipped and — with the native prompt already suppressed via
-  // readOnlyHint — the tool executed with ZERO approval. Only skip the gate
-  // when we can positively confirm the tool is read-only.
-  const requiresApproval =
-    typeof toolMeta?.requires_approval === "boolean"
-      ? toolMeta.requires_approval
-      : true;
   // Cursor is deliberately not excepted: current Cursor builds can use the same
   // local elicitation gate as other capable hosts. Older builds that drop the
   // prompt fail closed, and the timeout response explains the upgrade path.
@@ -425,8 +477,7 @@ export async function handleRunTool(
     // call and never leaks across sessions. Any other or unknown mode keeps the
     // gate. Only bypassPermissions is skipped (deliberately narrow).
     const bypass = (await currentPermissionMode()) === "bypassPermissions";
-    const preApproved = sessionApproved.has(approvalKey(serverId, toolName));
-    if (!bypass && !preApproved) {
+    if (!bypass) {
       const message = await buildApprovalMessage(toolName, resolvedArgs);
       const timeout = hitlTimeoutMs();
 
@@ -452,26 +503,6 @@ export async function handleRunTool(
               },
             ],
           };
-        }
-
-        const alwaysAllow = await requestAlwaysAllowFollowUp(
-          mcpServer,
-          toolName,
-        );
-        if (alwaysAllow) {
-          try {
-            await callRemoteTool(remoteClient, "set_tool_approval", {
-              server_id: serverId,
-              tool_name: toolName,
-              value: "ALWAYS_ALLOWED",
-            });
-            sessionApproved.add(approvalKey(serverId, toolName));
-          } catch (err) {
-            const detail = err instanceof Error ? err.message : String(err);
-            console.error(
-              `[set_tool_approval] failed to persist "${toolName}" to Glean: ${detail}`,
-            );
-          }
         }
       } catch (err) {
         // Fail CLOSED. An approval gate that executes the action when the
