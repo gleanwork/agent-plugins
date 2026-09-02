@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.1](https://github.com/gleanwork/agent-plugins/compare/v3.4.0...v3.4.1) (2026-09-02)
+
+### Documentation
+
+* broaden Claude plugin surface guidance ([11d566c](https://github.com/gleanwork/agent-plugins/commit/11d566cf05dba9051c4a7675fe1035ea8ba2cb9f))
+
 ## [3.4.0](https://github.com/gleanwork/agent-plugins/compare/v3.3.0...v3.4.0) (2026-08-20)
 
 ### Features
