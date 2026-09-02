@@ -18,6 +18,12 @@ const DEFAULT_FILE_ARG_MAX_BYTES = 5 * 1024 * 1024;
 // pass an explicit (longer) value the prompt errors out from under the user.
 const defaultHitlTimeoutMs = 300_000;
 
+// Skip repeat prompts until discovery reflects the persisted grant.
+const sessionApproved = new Set<string>();
+function approvalKey(serverId: string, toolName: string): string {
+  return JSON.stringify([serverId, toolName]);
+}
+
 export class FileArgsError extends Error {
   constructor(message: string) {
     super(message);
@@ -229,6 +235,28 @@ async function buildApprovalMessage(
   return message.join("\n");
 }
 
+// This follow-up only controls approval for future calls.
+const alwaysAllowFollowUpTimeoutMs = 5_000;
+
+async function requestAlwaysAllowFollowUp(
+  mcpServer: Server,
+  toolName: string,
+): Promise<boolean> {
+  try {
+    const result = await mcpServer.elicitInput(
+      {
+        message: `Always allow ${toolName} for future calls?`,
+        // Empty form preserves the host-native Yes/No actions.
+        requestedSchema: { type: "object", properties: {} } as any,
+      },
+      { timeout: alwaysAllowFollowUpTimeoutMs },
+    );
+    return result.action === "accept";
+  } catch {
+    return false;
+  }
+}
+
 // A WeakSet so a short-lived server in tests doesn't leak,
 // and so the burn happens exactly once per server instance.
 const elicitationIdPrimed = new WeakSet<object>();
@@ -397,7 +425,8 @@ export async function handleRunTool(
     // call and never leaks across sessions. Any other or unknown mode keeps the
     // gate. Only bypassPermissions is skipped (deliberately narrow).
     const bypass = (await currentPermissionMode()) === "bypassPermissions";
-    if (!bypass) {
+    const preApproved = sessionApproved.has(approvalKey(serverId, toolName));
+    if (!bypass && !preApproved) {
       const message = await buildApprovalMessage(toolName, resolvedArgs);
       const timeout = hitlTimeoutMs();
 
@@ -423,6 +452,26 @@ export async function handleRunTool(
               },
             ],
           };
+        }
+
+        const alwaysAllow = await requestAlwaysAllowFollowUp(
+          mcpServer,
+          toolName,
+        );
+        if (alwaysAllow) {
+          try {
+            await callRemoteTool(remoteClient, "set_tool_approval", {
+              server_id: serverId,
+              tool_name: toolName,
+              value: "ALWAYS_ALLOWED",
+            });
+            sessionApproved.add(approvalKey(serverId, toolName));
+          } catch (err) {
+            const detail = err instanceof Error ? err.message : String(err);
+            console.error(
+              `[set_tool_approval] failed to persist "${toolName}" to Glean: ${detail}`,
+            );
+          }
         }
       } catch (err) {
         // Fail CLOSED. An approval gate that executes the action when the

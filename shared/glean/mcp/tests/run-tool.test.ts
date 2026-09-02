@@ -257,6 +257,13 @@ function makeRemote() {
   } as any;
 }
 
+function acceptThenDecline() {
+  return vi
+    .fn()
+    .mockResolvedValueOnce({ action: "accept" })
+    .mockResolvedValue({ action: "decline" });
+}
+
 function makeServer(opts: {
   elicitation?: boolean;
   clientName?: string;
@@ -270,7 +277,7 @@ function makeServer(opts: {
     getClientVersion: vi
       .fn()
       .mockReturnValue({ name: opts.clientName ?? "claude-code", version: "1" }),
-    elicitInput: opts.elicit ?? vi.fn().mockResolvedValue({ action: "accept" }),
+    elicitInput: opts.elicit ?? acceptThenDecline(),
     // Used by primeElicitationCancellation to burn request id 0.
     request: opts.request ?? vi.fn().mockResolvedValue({}),
   } as any;
@@ -350,12 +357,12 @@ describe("handleRunTool (HITL)", () => {
   it("fails closed when the tool's approval requirement is unknown", async () => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote();
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = acceptThenDecline();
     const server = makeServer({ elicitation: true, elicit });
 
     await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
 
-    expect(elicit).toHaveBeenCalledTimes(1);
+    expect(elicit).toHaveBeenCalledTimes(2);
     expect(remote.callTool).toHaveBeenCalledTimes(1);
   });
 
@@ -374,7 +381,7 @@ describe("handleRunTool (HITL)", () => {
   it("sanitizes argument keys so newlines cannot forge prompt labels", async () => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote();
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = acceptThenDecline();
     const server = makeServer({ elicitation: true, elicit });
     await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
 
@@ -400,7 +407,7 @@ describe("handleRunTool (HITL)", () => {
   it("DOES elicit for Cursor — our prompt is the single gate there too", async () => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote();
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = acceptThenDecline();
     const server = makeServer({
       elicitation: true,
       clientName: "cursor-vscode",
@@ -410,9 +417,8 @@ describe("handleRunTool (HITL)", () => {
 
     await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
 
-    // Cursor is no longer excluded: it gets readOnlyHint like every other
-    // elicitation-capable host, so this prompt is the only approval gate.
-    expect(elicit).toHaveBeenCalledTimes(1);
+    // Cursor gets the same two-step gate as other elicitation-capable hosts.
+    expect(elicit).toHaveBeenCalledTimes(2);
     expect(remote.callTool).toHaveBeenCalledTimes(1);
   });
 
@@ -422,7 +428,7 @@ describe("handleRunTool (HITL)", () => {
   it("spells out action and arguments for Cursor too, since it no longer shows them", async () => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote();
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = acceptThenDecline();
     const server = makeServer({
       elicitation: true,
       clientName: "cursor-vscode",
@@ -445,7 +451,7 @@ describe("handleRunTool (HITL)", () => {
   it("spells out action and arguments for a host that does not render them", async () => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote();
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = acceptThenDecline();
     const server = makeServer({ elicitation: true, elicit });
     await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
 
@@ -651,7 +657,7 @@ describe("handleRunTool (HITL)", () => {
   it("prompts with action name + arguments and forwards on accept", async () => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote();
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = acceptThenDecline();
     const server = makeServer({ elicitation: true, elicit });
     await writeToolJson(tmpDir, "jirasearch", {
       requires_approval: true,
@@ -677,7 +683,12 @@ describe("handleRunTool (HITL)", () => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote();
     const request = vi.fn().mockResolvedValue({});
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = vi
+      .fn()
+      .mockResolvedValueOnce({ action: "accept" })
+      .mockResolvedValueOnce({ action: "decline" })
+      .mockResolvedValueOnce({ action: "accept" })
+      .mockResolvedValueOnce({ action: "decline" });
     const server = makeServer({ elicitation: true, elicit, request });
     await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
 
@@ -687,8 +698,7 @@ describe("handleRunTool (HITL)", () => {
     // Ping fired exactly once for this server, and it is a ping.
     expect(request).toHaveBeenCalledTimes(1);
     expect(request.mock.calls[0][0]).toEqual({ method: "ping" });
-    // Both prompts still ran.
-    expect(elicit).toHaveBeenCalledTimes(2);
+    expect(elicit).toHaveBeenCalledTimes(4);
   });
 
   it("does not ping when the tool requires no approval (no elicitation)", async () => {
@@ -707,7 +717,7 @@ describe("handleRunTool (HITL)", () => {
     vi.stubEnv("ENABLE_HITL", "true");
     vi.stubEnv("HITL_TIMEOUT_MS", "5000");
     const remote = makeRemote();
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = acceptThenDecline();
     const server = makeServer({ elicitation: true, elicit });
     await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
 
@@ -723,7 +733,7 @@ describe("handleRunTool (HITL)", () => {
     for (const bad of ["0", "-1", "abc", ""]) {
       vi.stubEnv("HITL_TIMEOUT_MS", bad);
       const remote = makeRemote();
-      const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+      const elicit = acceptThenDecline();
       const server = makeServer({ elicitation: true, elicit });
 
       await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
@@ -764,7 +774,7 @@ describe("handleRunTool (HITL)", () => {
   it("spills large arguments to a file and keeps the prompt short", async () => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote();
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = acceptThenDecline();
     const server = makeServer({ elicitation: true, elicit });
     await writeToolJson(tmpDir, "create_doc", { requires_approval: true });
 
@@ -795,7 +805,7 @@ describe("handleRunTool (HITL)", () => {
   it("surfaces file_args content in the approval prompt", async () => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote();
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = acceptThenDecline();
     const server = makeServer({ elicitation: true, elicit });
     await writeToolJson(tmpDir, "create_doc", { requires_approval: true });
     const bodyFile = path.join(tmpDir, "draft.md");
@@ -859,6 +869,163 @@ describe("handleRunTool (HITL)", () => {
     expect(remote.callTool).not.toHaveBeenCalled();
   });
 
+  it("uses a plain approval form, then asks the optional follow-up", async () => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote();
+    const elicit = vi
+      .fn()
+      .mockResolvedValueOnce({ action: "accept" })
+      .mockResolvedValueOnce({ action: "decline" });
+    const server = makeServer({ elicitation: true, elicit });
+    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+
+    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+
+    expect(elicit).toHaveBeenCalledTimes(2);
+    expect(elicit.mock.calls[0][0].requestedSchema).toEqual({
+      type: "object",
+      properties: {},
+    });
+    expect(elicit.mock.calls[1][0].message).toContain(
+      "Always allow jirasearch for future calls?",
+    );
+    expect(elicit.mock.calls[1][1].timeout).toBe(5_000);
+  });
+
+  it("runs once without persisting when the follow-up is declined", async () => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote();
+    const elicit = acceptThenDecline();
+    const server = makeServer({ elicitation: true, elicit });
+    await writeToolJson(tmpDir, "no_tool", { requires_approval: true });
+
+    await handleRunTool(remote, server, tmpDir, {
+      ...baseArgs,
+      tool_name: "no_tool",
+    }, ALL_ON);
+
+    expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toEqual([
+      "run_tool",
+    ]);
+  });
+
+  it("runs once without persisting when the follow-up times out", async () => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote();
+    const elicit = vi
+      .fn()
+      .mockResolvedValueOnce({ action: "accept" })
+      .mockRejectedValueOnce(new Error("Request timed out"));
+    const server = makeServer({ elicitation: true, elicit });
+    await writeToolJson(tmpDir, "timeout_tool", { requires_approval: true });
+
+    await handleRunTool(remote, server, tmpDir, {
+      ...baseArgs,
+      tool_name: "timeout_tool",
+    }, ALL_ON);
+
+    expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toEqual([
+      "run_tool",
+    ]);
+  });
+
+  it("runs once without persisting when the follow-up is cancelled", async () => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote();
+    const elicit = vi
+      .fn()
+      .mockResolvedValueOnce({ action: "accept" })
+      .mockResolvedValueOnce({ action: "cancel" });
+    const server = makeServer({ elicitation: true, elicit });
+    await writeToolJson(tmpDir, "cancel_tool", { requires_approval: true });
+
+    await handleRunTool(remote, server, tmpDir, {
+      ...baseArgs,
+      tool_name: "cancel_tool",
+    }, ALL_ON);
+
+    expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toEqual([
+      "run_tool",
+    ]);
+  });
+
+  it("persists an accepted follow-up before running and skips future prompts", async () => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote();
+    const elicit = vi
+      .fn()
+      .mockResolvedValueOnce({ action: "accept" })
+      .mockResolvedValueOnce({ action: "accept" });
+    const server = makeServer({ elicitation: true, elicit });
+    const args = {
+      server_id: "composio/jira-pack",
+      tool_name: "always_tool",
+      arguments: {},
+    };
+    await writeToolJson(tmpDir, "always_tool", { requires_approval: true });
+
+    await handleRunTool(remote, server, tmpDir, args, ALL_ON);
+
+    expect(remote.callTool.mock.calls.slice(0, 2).map((c: any) => c[0].name)).toEqual([
+      "set_tool_approval",
+      "run_tool",
+    ]);
+    expect(remote.callTool.mock.calls[0][0].arguments).toEqual({
+      server_id: "composio/jira-pack",
+      tool_name: "always_tool",
+      value: "ALWAYS_ALLOWED",
+    });
+
+    await handleRunTool(remote, server, tmpDir, args, ALL_ON);
+    expect(elicit).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not block execution when persistence fails", async () => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const remote = makeRemote();
+    remote.callTool.mockImplementation(async (req: any) => {
+      if (req.name === "set_tool_approval") throw new Error("403 no scope");
+      return { content: [{ type: "text", text: "ok" }] };
+    });
+    const elicit = vi
+      .fn()
+      .mockResolvedValueOnce({ action: "accept" })
+      .mockResolvedValueOnce({ action: "accept" });
+    const server = makeServer({ elicitation: true, elicit });
+    const args = {
+      server_id: "s",
+      tool_name: "always_fail_tool",
+      arguments: {},
+    };
+    await writeToolJson(tmpDir, "always_fail_tool", { requires_approval: true });
+
+    const result = await handleRunTool(remote, server, tmpDir, args, ALL_ON);
+
+    expect(result.isError).toBeFalsy();
+    expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toContain(
+      "run_tool",
+    );
+    errSpy.mockRestore();
+  });
+
+  it("treats accepted follow-ups without content as one-time approval", async () => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote();
+    const elicit = acceptThenDecline();
+    const server = makeServer({ elicitation: true, elicit });
+    await writeToolJson(tmpDir, "contentless_tool", { requires_approval: true });
+
+    await handleRunTool(remote, server, tmpDir, {
+      ...baseArgs,
+      tool_name: "contentless_tool",
+    }, ALL_ON);
+
+    expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toEqual([
+      "run_tool",
+    ]);
+  });
+
   it("skips the elicitation gate and executes directly in bypassPermissions mode", async () => {
     vi.stubEnv("ENABLE_HITL", "true");
     vi.stubEnv("CLAUDE_PLUGIN_DATA", tmpDir);
@@ -882,12 +1049,12 @@ describe("handleRunTool (HITL)", () => {
     await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
     await writeModeMarker(tmpDir, "sess-default", "default");
     const remote = makeRemote();
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = acceptThenDecline();
     const server = makeServer({ elicitation: true, elicit });
 
     await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
 
-    expect(elicit).toHaveBeenCalledTimes(1);
+    expect(elicit).toHaveBeenCalledTimes(2);
     expect(remote.callTool).toHaveBeenCalledTimes(1);
   });
 
@@ -898,12 +1065,12 @@ describe("handleRunTool (HITL)", () => {
     await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
     // Deliberately write no marker.
     const remote = makeRemote();
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = acceptThenDecline();
     const server = makeServer({ elicitation: true, elicit });
 
     await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
 
-    expect(elicit).toHaveBeenCalledTimes(1);
+    expect(elicit).toHaveBeenCalledTimes(2);
   });
 
   it("ignores a bypass marker written for a different session (no cross-session leak)", async () => {
@@ -914,12 +1081,12 @@ describe("handleRunTool (HITL)", () => {
     // Another concurrent session opted into bypass; ours did not.
     await writeModeMarker(tmpDir, "sess-B", "bypassPermissions");
     const remote = makeRemote();
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = acceptThenDecline();
     const server = makeServer({ elicitation: true, elicit });
 
     await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
 
-    expect(elicit).toHaveBeenCalledTimes(1); // gate preserved for THIS session
+    expect(elicit).toHaveBeenCalledTimes(2); // gate preserved for THIS session
   });
 });
 
