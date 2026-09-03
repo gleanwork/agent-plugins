@@ -10,10 +10,11 @@
   },
   "type": "module",
   "scripts": {
-    "build": "pluginpack build",
+    "build": "pluginpack build && npm run check:plugin-changelogs",
     "build:bundle": "node shared/glean/mcp/build.mjs",
     "clean": "pluginpack clean",
     "check:no-shell": "node scripts/check-no-shell-scripts.mjs",
+    "check:plugin-changelogs": "node scripts/check-plugin-changelogs.mjs",
     "check:release-version": "node scripts/check-release-version.mjs",
     "prune": "pluginpack prune",
     "typecheck:bundle": "tsc --noEmit -p shared/glean/mcp/tsconfig.json",
