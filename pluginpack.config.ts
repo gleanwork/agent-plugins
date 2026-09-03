@@ -1,6 +1,9 @@
 import { defineConfig } from "@gleanwork/pluginpack";
 import pkg from "./package.json" with { type: "json" };
 
+const gleanPluginDescription =
+  "Use Glean to search your company's knowledge, chat with Glean Assistant, and discover and use the skills and connected tools available to your organization.";
+
 export default defineConfig({
   name: "glean-plugins",
   version: pkg.version,
@@ -29,8 +32,7 @@ export default defineConfig({
           source: "shared/glean",
           overrides: "overrides/claude/glean",
           displayName: "Glean",
-          description:
-            "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
+          description: gleanPluginDescription,
         },
         "glean-dev-docs": {
           source: "shared/glean-dev-docs",
@@ -65,8 +67,7 @@ export default defineConfig({
           overrides: "overrides/cursor/glean",
           exclude: ["hooks", "scripts"],
           displayName: "Glean",
-          description:
-            "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
+          description: gleanPluginDescription,
           manifest: {
             logo: "assets/avatar.svg",
             keywords: [
@@ -113,8 +114,7 @@ export default defineConfig({
         glean: {
           source: "shared/glean",
           overrides: "overrides/codex/glean",
-          description:
-            "Official Glean plugin — search documents, Slack, and email; explore code across repos; find experts and stakeholders; prep for meetings and onboarding.",
+          description: gleanPluginDescription,
           manifest: {
             interface: {
               displayName: "Glean",
