@@ -6,7 +6,6 @@
 // env sanitation before launching the plugin proper.
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
 
 // Treat empty strings and un-interpolated "${VAR}" placeholders (which a host
 // may pass through verbatim when a variable is unset) as "not set" — matching
@@ -19,39 +18,12 @@ function val(v) {
   return t;
 }
 
-const launchCwd = process.cwd();
-
 // Resolve where credentials, caches, and config are stored.
 // CLAUDE_PLUGIN_DATA is the managed lifecycle dir provided by the plugin host.
 const pluginDataDir =
   val(process.env.CLAUDE_PLUGIN_DATA) ??
   path.join(os.homedir() || os.tmpdir(), ".glean");
 process.env.PLUGIN_DATA_DIR = pluginDataDir;
-
-// Discovered skill files are written under the data dir by default, so the
-// skills cache tracks PLUGIN_DATA_DIR instead of being resolved separately.
-let skillsBaseDir = path.join(pluginDataDir, "glean-skills-cache");
-
-// Opt-in: when USE_CLAUDE_PROJECT_DIR=1, route the skills cache under the launch
-// project's .claude/tmp/ so the glean_run skill's allowed-tools Read glob can
-// match cache files via a path anchored to the project root. projectDir is the
-// git repo root for the launch cwd, falling back to the launch cwd when it is
-// not inside a git repo (or git is unavailable).
-if (process.env.USE_CLAUDE_PROJECT_DIR === "1") {
-  let projectDir = launchCwd;
-  try {
-    const top = execFileSync(
-      "git",
-      ["-C", launchCwd, "rev-parse", "--show-toplevel"],
-      { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] },
-    ).trim();
-    if (top) projectDir = top;
-  } catch {
-    /* not a git repo or git missing: keep the launch cwd fallback */
-  }
-  skillsBaseDir = path.join(projectDir, ".claude", "tmp", "glean-skills-cache");
-}
-process.env.SKILLS_BASE_DIR = skillsBaseDir;
 
 // Resolve the chat session id host-side. Host-awareness lives here, not in the
 // plugin: the launcher reads whatever variable this host exposes and exports the

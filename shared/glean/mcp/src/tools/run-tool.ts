@@ -10,6 +10,7 @@ import { FILE_ARGS_DISABLED_TEXT } from "../policy/enforce.js";
 import { buildCompactArgs, writeApprovalArgsFile } from "./approval-args.js";
 import { resolveSessionId } from "../session-id.js";
 import { hostSharedDataDir } from "../data-dir.js";
+import type { ToolMetadataCache, ToolInputSchema } from "../skill-files.js";
 
 const DEFAULT_FILE_ARG_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -23,15 +24,6 @@ export class FileArgsError extends Error {
     super(message);
     this.name = "FileArgsError";
   }
-}
-
-// A downstream tool parameter's JSON Schema, narrowed to the bits we use.
-// `type` may be a single string or an array (e.g. ["object", "null"]).
-interface ParamSchema {
-  type?: string | string[];
-}
-interface ToolInputSchema {
-  properties?: Record<string, ParamSchema>;
 }
 
 // The set of JSON Schema types declared for a top-level parameter. file_args
@@ -157,36 +149,6 @@ export async function resolveFileArgs(
   }
 
   return merged;
-}
-
-interface ToolMetadata {
-  requires_approval?: boolean;
-  name?: string;
-  description?: string;
-  server_id?: string;
-  inputSchema?: ToolInputSchema;
-}
-
-async function findToolJson(
-  skillsBaseDir: string,
-  toolName: string,
-): Promise<ToolMetadata | null> {
-  try {
-    const skillDirs = await fs.readdir(skillsBaseDir, { withFileTypes: true });
-    for (const dir of skillDirs) {
-      if (!dir.isDirectory()) continue;
-      const toolPath = path.join(skillsBaseDir, dir.name, "tools", `${toolName}.json`);
-      try {
-        const content = await fs.readFile(toolPath, "utf-8");
-        return JSON.parse(content) as ToolMetadata;
-      } catch {
-        continue;
-      }
-    }
-  } catch {
-    // Skills dir doesn't exist or can't be read
-  }
-  return null;
 }
 
 // A stdio server's only client signal is clientInfo.name; Cursor reports
@@ -315,7 +277,7 @@ export interface RunToolPolicy {
 export async function handleRunTool(
   remoteClient: Client,
   mcpServer: Server,
-  skillsBaseDir: string,
+  toolMetadata: ToolMetadataCache,
   args: Record<string, unknown>,
   policy: RunToolPolicy,
 ): Promise<CallToolResult> {
@@ -334,7 +296,7 @@ export async function handleRunTool(
   // Load the downstream tool's metadata once, up front: its inputSchema drives
   // file_args JSON-parsing (object/array params) and its requires_approval
   // drives the HITL gate. Both paths must see it regardless of ENABLE_HITL.
-  const toolMeta = await findToolJson(skillsBaseDir, toolName);
+  const toolMeta = toolMetadata.get(serverId, toolName);
 
   // Refuse before reading any model-supplied path. Disabled file_args must be
   // inert, not merely absent from the advertised schema.
@@ -371,9 +333,9 @@ export async function handleRunTool(
 
   const hitlEnabled = process.env.ENABLE_HITL === "true";
   // Fail CLOSED when the tool's approval requirement is unknown. The gate used
-  // to key on `toolMeta?.requires_approval`; a missing or unparseable tool JSON
-  // (evicted by evictStaleSkills after a week, called from memory without a
-  // fresh find_skills_and_tools, or corrupt) made that falsy, so the gate
+  // to key on `toolMeta?.requires_approval`; missing metadata (for example,
+  // when the model has not read the tool definition yet, or when it is corrupt)
+  // must never make the gate disappear, so the gate
   // was skipped and — with the native prompt already suppressed via
   // readOnlyHint — the tool executed with ZERO approval. Only skip the gate
   // when we can positively confirm the tool is read-only.

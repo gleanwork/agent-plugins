@@ -8,7 +8,6 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import path from "node:path";
 import fs from "node:fs";
-import { homedir, tmpdir } from "node:os";
 import {
   AuthRequiredError,
   createRemoteClient,
@@ -20,8 +19,9 @@ import {
   closeCallbackServer,
 } from "./auth-callback-server.js";
 import { handleFindSkills } from "./tools/find-skills.js";
+import { handleReadSkillFiles } from "./tools/read-skill-files.js";
 import { handleRunTool, runToolAnnotations } from "./tools/run-tool.js";
-import { evictStaleSkills } from "./skill-writer.js";
+import { SkillFileCache } from "./skill-files.js";
 import {
   loadServerUrl,
   saveServerUrl,
@@ -127,13 +127,6 @@ function logLine(label: string, detail?: Record<string, unknown>): void {
   console.error(line.trimEnd());
 }
 
-function resolveSkillsBaseDir(): string {
-  if (process.env.SKILLS_BASE_DIR) {
-    return process.env.SKILLS_BASE_DIR;
-  }
-  return path.join(tmpdir(), "glean-skills-cache");
-}
-
 const server = new Server(
   { name: "glean", version: pluginVersionString() },
   { capabilities: { tools: { listChanged: true } } },
@@ -155,6 +148,11 @@ let oauthProvider: GleanOAuthClientProvider | undefined;
 // Empty until `setup` (or any prior process for this URL) has driven a
 // successful tool fetch.
 let cachedRemoteTools: Tool[] = loadRemoteTools(resolveServerUrl() ?? "");
+
+// Skill contents are owned by the remote server. The plugin retains only the
+// tool metadata needed by local HITL and file_args handling, plus an in-memory
+// compatibility cache for older servers that still return full JSON skills.
+const skillFiles = new SkillFileCache();
 
 function getOAuthProvider(): GleanOAuthClientProvider {
   if (!oauthProvider) {
@@ -193,18 +191,16 @@ const FIND_SKILLS_TOOL: Tool = {
     "timing, reasons, constraints) — and pass each as a separate entry in the " +
     "'queries' array. For example, for \"Send an email to X for tomorrow's demo " +
     "meeting as leadership will be visiting\", the single query is \"send an email\". " +
-    "Discovered skills are written to local files and an XML skill " +
-    "index with usage instructions is returned. " +
+    "An XML skill index with the available file paths is returned. " +
     "If a returned skill lists no tools and its playbook does not let you " +
     "complete the task, first check whether tools already in scope can do it — " +
     "tools from other skills in this response, tools from earlier find_skills_and_tools " +
     "calls, or tools you can already call directly. If none fit, call find_skills_and_tools " +
     "again with reworded or additional queries. " +
-    "If a previously-cached skill file referenced from memory or instructions " +
-    "is missing on disk, call find_skills_and_tools again to re-fetch it before failing. " +
     "To use a returned skill: (1) pick the most relevant from the returned " +
-    "skills; (2) read its SKILL.md for instructions; (3) read each tool's JSON " +
-    "file (tools/TOOL_NAME.json) for the exact server_id, name, and inputSchema " +
+    "skills; (2) call read_skill_files for SKILL.md and read it for instructions; " +
+    "(3) call read_skill_files for each tool JSON file " +
+    "(tools/TOOL_NAME.json) to get the exact server_id, name, and inputSchema " +
     "(exact parameter names and types); (4) call run_tool with the server_id, " +
     "tool_name (from the name field), and arguments matching the inputSchema. " +
     "Never guess parameter names — read the tool JSON file first.",
@@ -225,11 +221,38 @@ const FIND_SKILLS_TOOL: Tool = {
   },
 };
 
+const READ_SKILL_FILES_TOOL: Tool = {
+  name: "read_skill_files",
+  annotations: { readOnlyHint: true },
+  description:
+    "Read one or more files from a Glean skill returned by a previous " +
+    "find_skills_and_tools call. Use this to read SKILL.md and tools/*.json " +
+    "before using run_tool. Pass the exact skill name and file paths from the " +
+    "find_skills_and_tools response.",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      skill_name: {
+        type: "string",
+        description: "The skill name from a previous find_skills_and_tools response.",
+      },
+      file_paths: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 1,
+        description:
+          "Paths within the skill to read, such as SKILL.md or tools/TOOL_NAME.json.",
+      },
+    },
+    required: ["skill_name", "file_paths"],
+  },
+};
+
 const RUN_TOOL_TOOL: Tool = {
   name: "run_tool",
   description:
     "Execute a tool on a downstream MCP server. Before calling this tool, " +
-    "you MUST read the tool's JSON file from the find_skills_and_tools output to get " +
+    "you MUST call read_skill_files for the tool's JSON file to get " +
     "the exact server_id, tool_name, and input_schema. Pass arguments that match " +
     "the input_schema exactly — do not guess parameter names.",
   inputSchema: {
@@ -322,6 +345,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       decision,
       setupTool: SETUP_TOOL,
       findSkillsTool: FIND_SKILLS_TOOL,
+      readSkillFilesTool: READ_SKILL_FILES_TOOL,
       runTool,
       promoted: dynamic,
     });
@@ -663,8 +687,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       const sessionId = resolveSessionId();
 
-      const skillsBaseDir = resolveSkillsBaseDir();
-
       let remoteClient;
       try {
         remoteClient = await createRemoteClient(
@@ -691,17 +713,65 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       try {
-        const text = await handleFindSkills(
-          remoteClient,
-          skillsBaseDir,
-          args,
-        );
+        const text = await handleFindSkills(remoteClient, skillFiles, args);
         return { content: [{ type: "text", text }] };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`find_skills_and_tools: execution failed: ${msg}`);
         return {
           content: [{ type: "text", text: `find_skills_and_tools failed: ${msg}` }],
+          isError: true,
+        };
+      } finally {
+        await remoteClient.close();
+      }
+    }
+
+    case "read_skill_files": {
+      const serverUrl = resolveServerUrl();
+      if (!serverUrl) {
+        return {
+          content: [{ type: "text", text: SETUP_NEEDED_ERROR }],
+          isError: true,
+        };
+      }
+
+      if (!getOAuthProvider().tokens()) {
+        return {
+          content: [{ type: "text", text: AUTH_REDIRECT_TO_SETUP_TEXT }],
+        };
+      }
+
+      let remoteClient;
+      try {
+        remoteClient = await createRemoteClient(
+          serverUrl,
+          getRemoteClientOpts(),
+          resolveSessionId(),
+        );
+      } catch (err) {
+        if (err instanceof AuthRequiredError) {
+          return {
+            content: [{ type: "text", text: AUTH_REDIRECT_TO_SETUP_TEXT }],
+          };
+        }
+        const msg = err instanceof Error ? err.message : String(err);
+        logLine("connect.backend-error", { label: "read_skill_files", msg });
+        return {
+          content: [
+            { type: "text", text: `Failed to connect to Glean backend: ${msg}` },
+          ],
+          isError: true,
+        };
+      }
+      try {
+        const text = await handleReadSkillFiles(remoteClient, skillFiles, args);
+        return { content: [{ type: "text", text }] };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`read_skill_files: execution failed: ${msg}`);
+        return {
+          content: [{ type: "text", text: `read_skill_files failed: ${msg}` }],
           isError: true,
         };
       } finally {
@@ -755,8 +825,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       try {
-        const skillsBaseDir = resolveSkillsBaseDir();
-        return await handleRunTool(remoteClient, server, skillsBaseDir, args, {
+        return await handleRunTool(remoteClient, server, skillFiles.metadata, args, {
           fileArgs: decision.features.fileArgs,
         });
       } catch (err) {
@@ -780,6 +849,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         clearServerUrl();
         clearCredentials();
         clearRemoteTools();
+        skillFiles.clear();
         oauthProvider = undefined;
         cachedRemoteTools = [];
         // Policy survives a user reset: only a new valid remote policy may
@@ -862,6 +932,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // instant); we just rehydrate from whatever cache exists for the
         // newly configured URL — empty for a first-time server.
         clearCredentials();
+        skillFiles.clear();
         oauthProvider = undefined;
         cachedRemoteTools = loadRemoteTools(normalized);
         setPolicyServerUrl(normalized);
@@ -882,15 +953,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 async function main() {
-  // Run once per session at MCP server startup.
-  const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-  try {
-    await evictStaleSkills(resolveSkillsBaseDir(), ONE_WEEK_MS, logLine);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    logLine("evict-stale-skills.failed", { msg });
-  }
-
   // Observe the negotiated MCP protocol revision from the initialize response.
   const transport = protocolVersion.wrap(new StdioServerTransport());
   await server.connect(transport);

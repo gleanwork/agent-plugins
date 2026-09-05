@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import fs from "node:fs/promises";
-import path from "node:path";
-import os from "node:os";
 import { handleFindSkills } from "../src/tools/find-skills.js";
+import { SkillFileCache } from "../src/skill-files.js";
 import type { SkillsMap } from "../src/types.js";
 
 function createMockClient(skills: SkillsMap) {
@@ -20,19 +18,13 @@ function createMockClient(skills: SkillsMap) {
 }
 
 describe("handleFindSkills", () => {
-  let tmpDir: string;
+  let skillFiles: SkillFileCache;
 
-  beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(
-      path.join(os.tmpdir(), "find-skills-test-"),
-    );
+  beforeEach(() => {
+    skillFiles = new SkillFileCache();
   });
 
-  afterEach(async () => {
-    await fs.rm(tmpDir, { recursive: true, force: true });
-  });
-
-  it("calls find_skills and writes skill files", async () => {
+  it("calls find_skills and returns an in-memory compatibility index", async () => {
     const mockClient = createMockClient({
       "search-jira": {
         "SKILL.md":
@@ -46,7 +38,7 @@ describe("handleFindSkills", () => {
       },
     });
 
-    const result = await handleFindSkills(mockClient, tmpDir, {});
+    const result = await handleFindSkills(mockClient, skillFiles, {});
 
     expect(mockClient.callTool).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -60,17 +52,15 @@ describe("handleFindSkills", () => {
     expect(result).toContain("<available_skills>");
     expect(result).toContain('name="search-jira"');
 
-    const skillContent = await fs.readFile(
-      path.join(tmpDir, "search-jira", "SKILL.md"),
-      "utf-8",
-    );
-    expect(skillContent).toContain("# Search Jira");
+    expect(skillFiles.legacy.read("search-jira", ["SKILL.md"])?.files).toEqual({
+      "SKILL.md": expect.stringContaining("# Search Jira"),
+    });
   });
 
   it("passes query argument as queries array", async () => {
     const mockClient = createMockClient({});
 
-    await handleFindSkills(mockClient, tmpDir, {
+    await handleFindSkills(mockClient, skillFiles, {
       query: "create a calendar event",
     });
 
@@ -87,7 +77,7 @@ describe("handleFindSkills", () => {
   it("passes queries array when provided", async () => {
     const mockClient = createMockClient({});
 
-    await handleFindSkills(mockClient, tmpDir, {
+    await handleFindSkills(mockClient, skillFiles, {
       queries: ["search emails", "create calendar event"],
     });
 
@@ -109,14 +99,14 @@ describe("handleFindSkills", () => {
       close: vi.fn(),
     } as any;
 
-    const result = await handleFindSkills(mockClient, tmpDir, {});
+    const result = await handleFindSkills(mockClient, skillFiles, {});
     expect(result).toBe("<available_skills />");
   });
 
   it("returns empty XML for no skills", async () => {
     const mockClient = createMockClient({});
 
-    const result = await handleFindSkills(mockClient, tmpDir, {});
+    const result = await handleFindSkills(mockClient, skillFiles, {});
 
     expect(result).toBe("<available_skills />");
   });
@@ -127,7 +117,7 @@ describe("handleFindSkills", () => {
       close: vi.fn(),
     } as any;
 
-    const result = await handleFindSkills(mockClient, tmpDir, {});
+    const result = await handleFindSkills(mockClient, skillFiles, {});
 
     expect(result).toBe("<available_skills />");
   });
@@ -142,7 +132,7 @@ describe("handleFindSkills", () => {
     } as any;
 
     await expect(
-      handleFindSkills(mockClient, tmpDir, {}),
+      handleFindSkills(mockClient, skillFiles, {}),
     ).rejects.toThrow("backend unavailable");
   });
 });
