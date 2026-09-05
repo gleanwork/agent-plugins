@@ -15,6 +15,7 @@ import {
   formatArgumentsForFile,
 } from "../src/tools/approval-args.js";
 import type { RunToolPolicy } from "../src/tools/run-tool.js";
+import { ToolMetadataCache } from "../src/skill-files.js";
 
 // The decision every install resolves to today, since production returns no policy.
 // Passed explicitly at each call site rather than defaulted, so a case that means to
@@ -277,17 +278,11 @@ function makeServer(opts: {
 }
 
 async function writeToolJson(
-  baseDir: string,
+  metadataCache: ToolMetadataCache,
   toolName: string,
   meta: Record<string, unknown>,
 ) {
-  const toolsDir = path.join(baseDir, "some-skill", "tools");
-  await fs.mkdir(toolsDir, { recursive: true });
-  await fs.writeFile(
-    path.join(toolsDir, `${toolName}.json`),
-    JSON.stringify(meta),
-    "utf-8",
-  );
+  metadataCache.set({ ...meta, name: toolName });
 }
 
 // Mirrors the marker the PreToolUse hook writes: <dataDir>/glean-hitl-mode/
@@ -308,6 +303,7 @@ async function writeModeMarker(
 
 describe("handleRunTool (HITL)", () => {
   let tmpDir: string;
+  let metadataCache: ToolMetadataCache;
   const baseArgs = {
     server_id: "composio/jira-pack",
     tool_name: "jirasearch",
@@ -316,6 +312,7 @@ describe("handleRunTool (HITL)", () => {
 
   beforeEach(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "run-tool-hitl-test-"));
+    metadataCache = new ToolMetadataCache();
   });
 
   afterEach(async () => {
@@ -327,9 +324,9 @@ describe("handleRunTool (HITL)", () => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote();
     const server = makeServer({ elicitation: false });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     expect(server.elicitInput).not.toHaveBeenCalled();
     expect(remote.callTool).toHaveBeenCalledTimes(1);
@@ -339,9 +336,9 @@ describe("handleRunTool (HITL)", () => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote();
     const server = makeServer({ elicitation: true });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: false });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: false });
 
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     expect(server.elicitInput).not.toHaveBeenCalled();
     expect(remote.callTool).toHaveBeenCalledTimes(1);
@@ -353,7 +350,7 @@ describe("handleRunTool (HITL)", () => {
     const elicit = vi.fn().mockResolvedValue({ action: "accept" });
     const server = makeServer({ elicitation: true, elicit });
 
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     expect(elicit).toHaveBeenCalledTimes(1);
     expect(remote.callTool).toHaveBeenCalledTimes(1);
@@ -365,7 +362,7 @@ describe("handleRunTool (HITL)", () => {
     const elicit = vi.fn().mockResolvedValue({ action: "decline" });
     const server = makeServer({ elicitation: true, elicit });
 
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     expect(elicit).toHaveBeenCalledTimes(1);
     expect(remote.callTool).not.toHaveBeenCalled();
@@ -376,12 +373,12 @@ describe("handleRunTool (HITL)", () => {
     const remote = makeRemote();
     const elicit = vi.fn().mockResolvedValue({ action: "accept" });
     const server = makeServer({ elicitation: true, elicit });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
     await handleRunTool(
       remote,
       server,
-      tmpDir,
+      metadataCache,
       {
         server_id: "s",
         tool_name: "jirasearch",
@@ -406,9 +403,9 @@ describe("handleRunTool (HITL)", () => {
       clientName: "cursor-vscode",
       elicit,
     });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     // Cursor is no longer excluded: it gets readOnlyHint like every other
     // elicitation-capable host, so this prompt is the only approval gate.
@@ -428,9 +425,9 @@ describe("handleRunTool (HITL)", () => {
       clientName: "cursor-vscode",
       elicit,
     });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
-    await handleRunTool(remote, server, tmpDir, {
+    await handleRunTool(remote, server, metadataCache, {
       ...baseArgs,
       arguments: { project: "ENG", summary: "ship it" },
     }, ALL_ON);
@@ -447,9 +444,9 @@ describe("handleRunTool (HITL)", () => {
     const remote = makeRemote();
     const elicit = vi.fn().mockResolvedValue({ action: "accept" });
     const server = makeServer({ elicitation: true, elicit });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
-    await handleRunTool(remote, server, tmpDir, {
+    await handleRunTool(remote, server, metadataCache, {
       ...baseArgs,
       arguments: { project: "ENG" },
     }, ALL_ON);
@@ -478,9 +475,9 @@ describe("handleRunTool (HITL)", () => {
       clientName: "cursor-vscode",
       elicit,
     });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
-    const result = await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    const result = await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
     const text = (result.content[0] as { text: string }).text;
 
     expect(result.isError).toBe(true);
@@ -507,9 +504,9 @@ describe("handleRunTool (HITL)", () => {
       clientName: "cursor-vscode",
       elicit,
     });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
-    const result = await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    const result = await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
     const text = (result.content[0] as { text: string }).text;
 
     expect(text).toContain("cannot tell which");
@@ -538,9 +535,9 @@ describe("handleRunTool (HITL)", () => {
       clientName: "cursor-vscode",
       elicit,
     });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
-    const result = await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    const result = await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
     const text = (result.content[0] as { text: string }).text;
 
     expect(result.isError).toBe(true);
@@ -560,9 +557,9 @@ describe("handleRunTool (HITL)", () => {
         ),
     );
     const server = makeServer({ elicitation: true, elicit });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
-    const result = await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    const result = await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     expect((result.content[0] as { text: string }).text).not.toContain("3.15");
     expect(remote.callTool).not.toHaveBeenCalled();
@@ -575,12 +572,12 @@ describe("handleRunTool (HITL)", () => {
     vi.stubEnv("ENABLE_HITL", "false");
     const remote = makeRemote();
     const server = makeServer({ elicitation: false });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: false });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: false });
 
     const result = await handleRunTool(
       remote,
       server,
-      tmpDir,
+      metadataCache,
       { ...baseArgs, file_args: { body: "/tmp/whatever.md" } },
       { fileArgs: false },
     );
@@ -599,12 +596,12 @@ describe("handleRunTool (HITL)", () => {
     vi.stubEnv("ENABLE_HITL", "false");
     const remote = makeRemote();
     const server = makeServer({ elicitation: false });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: false });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: false });
 
     const result = await handleRunTool(
       remote,
       server,
-      tmpDir,
+      metadataCache,
       { ...baseArgs, file_args: { body: path.join(tmpDir, "does-not-exist.md") } },
       { fileArgs: false },
     );
@@ -618,9 +615,9 @@ describe("handleRunTool (HITL)", () => {
     vi.stubEnv("ENABLE_HITL", "false");
     const remote = makeRemote();
     const server = makeServer({ elicitation: false });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: false });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: false });
 
-    const result = await handleRunTool(remote, server, tmpDir, baseArgs, {
+    const result = await handleRunTool(remote, server, metadataCache, baseArgs, {
       fileArgs: false,
     });
 
@@ -637,9 +634,9 @@ describe("handleRunTool (HITL)", () => {
       clientName: "cursor-vscode",
       elicit,
     });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
-    const result = await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    const result = await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
     const text = (result.content[0] as { text: string }).text;
 
     expect(text).toContain("cancelled by the user");
@@ -653,12 +650,12 @@ describe("handleRunTool (HITL)", () => {
     const remote = makeRemote();
     const elicit = vi.fn().mockResolvedValue({ action: "accept" });
     const server = makeServer({ elicitation: true, elicit });
-    await writeToolJson(tmpDir, "jirasearch", {
+    await writeToolJson(metadataCache, "jirasearch", {
       requires_approval: true,
       description: "Search Jira issues",
     });
 
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     const [params, options] = elicit.mock.calls[0];
     expect(params.message).toContain("Action: jirasearch");
@@ -679,10 +676,10 @@ describe("handleRunTool (HITL)", () => {
     const request = vi.fn().mockResolvedValue({});
     const elicit = vi.fn().mockResolvedValue({ action: "accept" });
     const server = makeServer({ elicitation: true, elicit, request });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     // Ping fired exactly once for this server, and it is a ping.
     expect(request).toHaveBeenCalledTimes(1);
@@ -696,9 +693,9 @@ describe("handleRunTool (HITL)", () => {
     const remote = makeRemote();
     const request = vi.fn().mockResolvedValue({});
     const server = makeServer({ elicitation: true, request });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: false });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: false });
 
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     expect(request).not.toHaveBeenCalled();
   });
@@ -709,16 +706,16 @@ describe("handleRunTool (HITL)", () => {
     const remote = makeRemote();
     const elicit = vi.fn().mockResolvedValue({ action: "accept" });
     const server = makeServer({ elicitation: true, elicit });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     expect(elicit.mock.calls[0][1].timeout).toBe(5000);
   });
 
   it("falls back to the default timeout for invalid HITL_TIMEOUT_MS", async () => {
     vi.stubEnv("ENABLE_HITL", "true");
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
     for (const bad of ["0", "-1", "abc", ""]) {
       vi.stubEnv("HITL_TIMEOUT_MS", bad);
@@ -726,7 +723,7 @@ describe("handleRunTool (HITL)", () => {
       const elicit = vi.fn().mockResolvedValue({ action: "accept" });
       const server = makeServer({ elicitation: true, elicit });
 
-      await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+      await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
       expect(elicit.mock.calls[0][1].timeout).toBe(300_000);
     }
@@ -737,9 +734,9 @@ describe("handleRunTool (HITL)", () => {
     const remote = makeRemote();
     const elicit = vi.fn().mockResolvedValue({ action: "decline" });
     const server = makeServer({ elicitation: true, elicit });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
-    const result = await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    const result = await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     expect(remote.callTool).not.toHaveBeenCalled();
     expect((result.content[0] as { text: string }).text).toContain("declined");
@@ -750,9 +747,9 @@ describe("handleRunTool (HITL)", () => {
     const remote = makeRemote();
     const elicit = vi.fn().mockRejectedValue(new Error("Request timed out"));
     const server = makeServer({ elicitation: true, elicit });
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
 
-    const result = await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    const result = await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     expect(remote.callTool).not.toHaveBeenCalled();
     expect(result.isError).toBe(true);
@@ -766,10 +763,10 @@ describe("handleRunTool (HITL)", () => {
     const remote = makeRemote();
     const elicit = vi.fn().mockResolvedValue({ action: "accept" });
     const server = makeServer({ elicitation: true, elicit });
-    await writeToolJson(tmpDir, "create_doc", { requires_approval: true });
+    await writeToolJson(metadataCache, "create_doc", { requires_approval: true });
 
     const bigBody = "| A | B |\n|---|---|\n" + "| x | y |\n".repeat(50);
-    await handleRunTool(remote, server, tmpDir, {
+    await handleRunTool(remote, server, metadataCache, {
       server_id: "s",
       tool_name: "create_doc",
       arguments: { title: "Report", body: bigBody },
@@ -797,11 +794,11 @@ describe("handleRunTool (HITL)", () => {
     const remote = makeRemote();
     const elicit = vi.fn().mockResolvedValue({ action: "accept" });
     const server = makeServer({ elicitation: true, elicit });
-    await writeToolJson(tmpDir, "create_doc", { requires_approval: true });
+    await writeToolJson(metadataCache, "create_doc", { requires_approval: true });
     const bodyFile = path.join(tmpDir, "draft.md");
     await fs.writeFile(bodyFile, "FILE_SOURCED_BODY", "utf-8");
 
-    await handleRunTool(remote, server, tmpDir, {
+    await handleRunTool(remote, server, metadataCache, {
       server_id: "s",
       tool_name: "create_doc",
       arguments: { title: "Doc" },
@@ -818,14 +815,14 @@ describe("handleRunTool (HITL)", () => {
     vi.stubEnv("ENABLE_HITL", "false");
     const remote = makeRemote();
     const server = makeServer({ elicitation: false });
-    await writeToolJson(tmpDir, "save_agent", {
+    await writeToolJson(metadataCache, "save_agent", {
       requires_approval: false,
       inputSchema: { properties: { spec: { type: "object" } } },
     });
     const specFile = path.join(tmpDir, "spec.json");
     await fs.writeFile(specFile, '{"name":"my-agent","steps":[1,2]}', "utf-8");
 
-    await handleRunTool(remote, server, tmpDir, {
+    await handleRunTool(remote, server, metadataCache, {
       server_id: "default",
       tool_name: "save_agent",
       arguments: {},
@@ -845,9 +842,9 @@ describe("handleRunTool (HITL)", () => {
     const remote = makeRemote();
     const elicit = vi.fn().mockResolvedValue({ action: "accept" });
     const server = makeServer({ elicitation: true, elicit });
-    await writeToolJson(tmpDir, "create_doc", { requires_approval: true });
+    await writeToolJson(metadataCache, "create_doc", { requires_approval: true });
 
-    const result = await handleRunTool(remote, server, tmpDir, {
+    const result = await handleRunTool(remote, server, metadataCache, {
       server_id: "s",
       tool_name: "create_doc",
       arguments: {},
@@ -863,13 +860,13 @@ describe("handleRunTool (HITL)", () => {
     vi.stubEnv("ENABLE_HITL", "true");
     vi.stubEnv("CLAUDE_PLUGIN_DATA", tmpDir);
     vi.stubEnv("GLEAN_SESSION_ID", "sess-bypass");
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
     await writeModeMarker(tmpDir, "sess-bypass", "bypassPermissions");
     const remote = makeRemote();
     const elicit = vi.fn().mockResolvedValue({ action: "accept" });
     const server = makeServer({ elicitation: true, elicit });
 
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     expect(elicit).not.toHaveBeenCalled();
     expect(remote.callTool).toHaveBeenCalledTimes(1);
@@ -879,13 +876,13 @@ describe("handleRunTool (HITL)", () => {
     vi.stubEnv("ENABLE_HITL", "true");
     vi.stubEnv("CLAUDE_PLUGIN_DATA", tmpDir);
     vi.stubEnv("GLEAN_SESSION_ID", "sess-default");
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
     await writeModeMarker(tmpDir, "sess-default", "default");
     const remote = makeRemote();
     const elicit = vi.fn().mockResolvedValue({ action: "accept" });
     const server = makeServer({ elicitation: true, elicit });
 
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     expect(elicit).toHaveBeenCalledTimes(1);
     expect(remote.callTool).toHaveBeenCalledTimes(1);
@@ -895,13 +892,13 @@ describe("handleRunTool (HITL)", () => {
     vi.stubEnv("ENABLE_HITL", "true");
     vi.stubEnv("CLAUDE_PLUGIN_DATA", tmpDir);
     vi.stubEnv("GLEAN_SESSION_ID", "sess-none");
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
     // Deliberately write no marker.
     const remote = makeRemote();
     const elicit = vi.fn().mockResolvedValue({ action: "accept" });
     const server = makeServer({ elicitation: true, elicit });
 
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     expect(elicit).toHaveBeenCalledTimes(1);
   });
@@ -910,14 +907,14 @@ describe("handleRunTool (HITL)", () => {
     vi.stubEnv("ENABLE_HITL", "true");
     vi.stubEnv("CLAUDE_PLUGIN_DATA", tmpDir);
     vi.stubEnv("GLEAN_SESSION_ID", "sess-A");
-    await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
+    await writeToolJson(metadataCache, "jirasearch", { requires_approval: true });
     // Another concurrent session opted into bypass; ours did not.
     await writeModeMarker(tmpDir, "sess-B", "bypassPermissions");
     const remote = makeRemote();
     const elicit = vi.fn().mockResolvedValue({ action: "accept" });
     const server = makeServer({ elicitation: true, elicit });
 
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, metadataCache, baseArgs, ALL_ON);
 
     expect(elicit).toHaveBeenCalledTimes(1); // gate preserved for THIS session
   });

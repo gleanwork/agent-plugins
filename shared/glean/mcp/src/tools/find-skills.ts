@@ -1,11 +1,14 @@
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { callRemoteTool } from "../remote-client.js";
-import { writeSkillsToDisk, formatAvailableSkillsPrompt } from "../skill-writer.js";
-import type { SkillsMap } from "../types.js";
+import {
+  formatLegacySkillIndex,
+  parseLegacySkillsResponse,
+  type SkillFileCache,
+} from "../skill-files.js";
 
 export async function handleFindSkills(
   remoteClient: Client,
-  skillsBaseDir: string,
+  skillFiles: SkillFileCache,
   args: Record<string, unknown>,
 ): Promise<string> {
   const toolArgs: Record<string, unknown> = {};
@@ -26,13 +29,25 @@ export async function handleFindSkills(
     throw new Error(textContent.text || "find_skills failed");
   }
 
-  const parsed = JSON.parse(textContent.text) as { skills?: SkillsMap };
-  if (!parsed.skills || typeof parsed.skills !== "object") {
-    console.error(
-      `find_skills: unexpected response shape, keys: ${Object.keys(parsed).join(", ")}`,
-    );
-    return "<available_skills />";
+  // A fresh discovery result is the authority for the current session. Drop
+  // metadata from previous discovery results so a changed approval policy can
+  // never reuse an old requires_approval value.
+  skillFiles.clear();
+
+  const text = textContent.text.trim();
+  if (text.startsWith("<available_skills")) {
+    return textContent.text;
   }
-  const index = await writeSkillsToDisk(parsed.skills, skillsBaseDir);
-  return formatAvailableSkillsPrompt(index);
+
+  // Older proxy servers return the complete skill tree as JSON. Keep that
+  // compatibility path in memory only; new servers return the lazy XML index
+  // and are read through read_skill_files below.
+  const legacySkills = parseLegacySkillsResponse(text);
+  if (legacySkills) {
+    skillFiles.ingestLegacySkills(legacySkills);
+    return formatLegacySkillIndex(legacySkills);
+  }
+
+  console.error("find_skills: unexpected response shape");
+  return "<available_skills />";
 }

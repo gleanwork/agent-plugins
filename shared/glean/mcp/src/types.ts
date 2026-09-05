@@ -1,11 +1,11 @@
 /**
- * Wire format from find_skills: a flat map of slash-separated file paths to
- * file contents (e.g. {"SKILL.md": "...", "tools/FOO.json": "..."}).
+ * Legacy wire format from find_skills: a flat map of slash-separated file
+ * paths to file contents. New servers return a lazy XML index instead.
  */
 export type SkillDirectoryMap = Record<string, string>;
 
 /**
- * Wire format from find_skills: a map of skill names to their file maps.
+ * Legacy compatibility format: a map of skill names to their file maps.
  */
 export type SkillsMap = Record<string, SkillDirectoryMap>;
 

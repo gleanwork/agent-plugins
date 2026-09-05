@@ -64,7 +64,6 @@ describe("plugin version", () => {
         env: {
           ...process.env,
           CLAUDE_PLUGIN_DATA: path.join(staged, "plugin-data"),
-          SKILLS_BASE_DIR: path.join(staged, "skills"),
         },
         stdio: "pipe",
       });

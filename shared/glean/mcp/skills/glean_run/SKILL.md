@@ -2,8 +2,6 @@
 name: glean_run
 description: Discover and run Glean skills for enterprise app tasks
 argument-hint: <task description>
-allowed-tools:
-  - Read(path="//**/glean-skills-cache/**")
 ---
 
 # Glean Run
@@ -64,7 +62,7 @@ find_skills_and_tools({
 })
 ```
 
-The response is an XML index of discovered skills with file paths.
+The response is an XML index of discovered skills and their available file paths.
 
 You can call `find_skills_and_tools` multiple times — e.g. to discover skills for
 individual sub-tasks as you work through a broad request.
@@ -72,16 +70,18 @@ individual sub-tasks as you work through a broad request.
 ## Step 2: Read Skill Instructions
 
 Browse the returned skills and select the one most relevant to the user's
-request. Read its `SKILL.md` file for detailed instructions. Skills typically
-contain guidance on how to use their tools, but the tools can also be called
-as independent units.
+request. Call `read_skill_files` with the selected skill name and `SKILL.md`
+to retrieve its detailed instructions. Skills typically contain guidance on
+how to use their tools, but the tools can also be called as independent units.
 
 ## Step 3: Read Tool Schemas
 
-Read each tool's JSON file (e.g. `tools/TOOL_NAME.json`) to get the exact
-`server_id`, `name`, and `inputSchema` with parameter names and types.
+Call `read_skill_files` for each tool's JSON file (e.g.
+`tools/TOOL_NAME.json`) to get the exact `server_id`, `name`, and `inputSchema`
+with parameter names and types.
 
-**Never guess parameter names** - always read the tool JSON file first.
+**Never guess parameter names** - always call `read_skill_files` for the tool
+JSON before calling `run_tool`.
 
 ## Step 4: Execute Tools
 

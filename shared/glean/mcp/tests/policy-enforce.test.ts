@@ -34,6 +34,13 @@ const findSkillsTool: Tool = {
   name: "find_skills_and_tools",
   inputSchema: { type: "object", properties: { queries: { type: "array" } } },
 };
+const readSkillFilesTool: Tool = {
+  name: "read_skill_files",
+  inputSchema: {
+    type: "object",
+    properties: { skill_name: { type: "string" }, file_paths: { type: "array" } },
+  },
+};
 
 function makeRunTool(): Tool {
   return {
@@ -63,6 +70,7 @@ function advertise(d: Decision) {
     decision: d,
     setupTool,
     findSkillsTool,
+    readSkillFilesTool,
     runTool: makeRunTool(),
     promoted,
   });
@@ -95,6 +103,7 @@ describe("no policy", () => {
     });
     expect(names(d)).toEqual([
       "find_skills_and_tools",
+      "read_skill_files",
       "run_tool",
       "setup",
       "search",
@@ -111,7 +120,7 @@ describe("no policy", () => {
       supportedFeatures: allSupported,
       policy: undefined,
     });
-    for (const name of ["setup", "find_skills_and_tools", "run_tool", "search", "chat"]) {
+    for (const name of ["setup", "find_skills_and_tools", "read_skill_files", "run_tool", "search", "chat"]) {
       expect(refusal(name, d)).toBeUndefined();
     }
   });
@@ -131,6 +140,7 @@ describe("deactivated", () => {
     expect(advertise(d).withheld.sort()).toEqual([
       "chat",
       "find_skills_and_tools",
+      "read_skill_files",
       "run_tool",
       "search",
     ]);
@@ -141,7 +151,7 @@ describe("deactivated", () => {
   });
 
   it("refuses everything else", () => {
-    for (const name of ["find_skills_and_tools", "run_tool", "search", "chat"]) {
+    for (const name of ["find_skills_and_tools", "read_skill_files", "run_tool", "search", "chat"]) {
       expect(refusal(name, d)?.isError).toBe(true);
     }
   });
@@ -195,6 +205,7 @@ describe("the remote's upgrade text", () => {
 
     expect(names(d)).toEqual([
       "find_skills_and_tools",
+      "read_skill_files",
       "run_tool",
       "setup",
       "search",
@@ -208,13 +219,14 @@ describe("the remote's upgrade text", () => {
 describe("metaTools disabled", () => {
   const d = decision({ features: { ...allSupported, metaTools: false } });
 
-  it("withdraws both meta tools but keeps setup and promoted tools", () => {
+  it("withdraws all meta tools but keeps setup and promoted tools", () => {
     expect(names(d)).toEqual(["setup", "search", "chat"]);
-    expect(advertise(d).withheld).toEqual(["find_skills_and_tools", "run_tool"]);
+    expect(advertise(d).withheld).toEqual(["find_skills_and_tools", "read_skill_files", "run_tool"]);
   });
 
-  it("refuses both by name, and nothing else", () => {
+  it("refuses all meta tools by name, and nothing else", () => {
     expect(refusal("find_skills_and_tools", d)?.isError).toBe(true);
+    expect(refusal("read_skill_files", d)?.isError).toBe(true);
     expect(refusal("run_tool", d)?.isError).toBe(true);
     expect(refusal("search", d)).toBeUndefined();
     expect(refusal("setup", d)).toBeUndefined();
@@ -225,7 +237,7 @@ describe("toolPromotion disabled", () => {
   const d = decision({ features: { ...allSupported, toolPromotion: false } });
 
   it("promotes none, and keeps the meta tools", () => {
-    expect(names(d)).toEqual(["find_skills_and_tools", "run_tool", "setup"]);
+    expect(names(d)).toEqual(["find_skills_and_tools", "read_skill_files", "run_tool", "setup"]);
     expect(advertise(d).withheld).toEqual(["search", "chat"]);
   });
 
@@ -249,6 +261,7 @@ describe("fileArgs disabled", () => {
   it("keeps run_tool but drops file_args from its schema", () => {
     expect(names(d)).toEqual([
       "find_skills_and_tools",
+      "read_skill_files",
       "run_tool",
       "setup",
       "search",
@@ -297,6 +310,7 @@ describe("withoutFileArgs", () => {
       decision: decision({ features: { ...allSupported, fileArgs: false } }),
       setupTool,
       findSkillsTool,
+      readSkillFilesTool,
       runTool: base,
       promoted,
     });
@@ -304,6 +318,7 @@ describe("withoutFileArgs", () => {
       decision: decision(),
       setupTool,
       findSkillsTool,
+      readSkillFilesTool,
       runTool: base,
       promoted,
     });
@@ -329,7 +344,7 @@ describe("setupClosingLine", () => {
 
   it("names the meta tools and the promoted tools when policy allows both", () => {
     expect(setupClosingLine({ decision: decision(), promoted })).toBe(
-      "You can now use find_skills_and_tools, run_tool, search, chat.",
+      "You can now use find_skills_and_tools, read_skill_files, run_tool, search, chat.",
     );
   });
 
@@ -341,7 +356,7 @@ describe("setupClosingLine", () => {
 
     const line = setupClosingLine({ decision: d, promoted });
 
-    expect(line).toBe("You can now use find_skills_and_tools, run_tool.");
+    expect(line).toBe("You can now use find_skills_and_tools, read_skill_files, run_tool.");
     for (const name of promoted) {
       expect(line).not.toContain(name);
       expect(names(d)).not.toContain(name);
@@ -355,6 +370,7 @@ describe("setupClosingLine", () => {
 
     expect(line).toBe("You can now use search, chat.");
     expect(names(d)).not.toContain("find_skills_and_tools");
+    expect(names(d)).not.toContain("read_skill_files");
     expect(names(d)).not.toContain("run_tool");
   });
 
@@ -362,7 +378,7 @@ describe("setupClosingLine", () => {
   // neither may leave a dangling reference to a list setup no longer prints.
   it("names only the meta tools when the remote promotes nothing", () => {
     expect(setupClosingLine({ decision: decision(), promoted: [] })).toBe(
-      "You can now use find_skills_and_tools, run_tool.",
+      "You can now use find_skills_and_tools, read_skill_files, run_tool.",
     );
   });
 

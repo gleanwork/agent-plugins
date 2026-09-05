@@ -5,10 +5,11 @@ import type { Decision } from "./types.js";
 // because it is how a user restores the connection that would lift the deactivation.
 export const SETUP_TOOL_NAME = "setup";
 
-// Gated together by `metaTools`, and gated as a pair on purpose: a surface with
-// find_skills_and_tools but no run_tool can discover work it cannot perform.
+// Gated together by `metaTools`: discovery, file reads, and execution form one
+// surface and must be withdrawn together.
 export const META_TOOL_NAMES: ReadonlySet<string> = new Set([
   "find_skills_and_tools",
+  "read_skill_files",
   "run_tool",
 ]);
 
@@ -47,16 +48,25 @@ export function advertisedTools(input: {
   decision: Decision;
   setupTool: Tool;
   findSkillsTool: Tool;
+  readSkillFilesTool: Tool;
   runTool: Tool;
   promoted: Tool[];
 }): Advertisement {
-  const { decision, setupTool, findSkillsTool, runTool, promoted } = input;
+  const {
+    decision,
+    setupTool,
+    findSkillsTool,
+    readSkillFilesTool,
+    runTool,
+    promoted,
+  } = input;
 
   if (decision.deactivated) {
     return {
       tools: [setupTool],
       withheld: [
         findSkillsTool.name,
+        readSkillFilesTool.name,
         runTool.name,
         ...promoted.map((t) => t.name),
       ],
@@ -69,10 +79,11 @@ export function advertisedTools(input: {
   if (decision.features.metaTools) {
     tools.push(
       findSkillsTool,
+      readSkillFilesTool,
       decision.features.fileArgs ? runTool : withoutFileArgs(runTool),
     );
   } else {
-    withheld.push(findSkillsTool.name, runTool.name);
+    withheld.push(findSkillsTool.name, readSkillFilesTool.name, runTool.name);
   }
 
   tools.push(setupTool);

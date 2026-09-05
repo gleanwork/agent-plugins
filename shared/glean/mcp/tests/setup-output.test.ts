@@ -86,7 +86,7 @@ describe("the assembled setup output", () => {
 
     expect(text).toContain("No tools are available beyond `setup`.");
     expect(text).not.toContain("You can now use");
-    for (const name of ["find_skills_and_tools", "run_tool", "search", "chat"]) {
+    for (const name of ["find_skills_and_tools", "read_skill_files", "run_tool", "search", "chat"]) {
       expect(text).not.toContain(name);
     }
   });
@@ -97,7 +97,7 @@ describe("the assembled setup output", () => {
       ["search", "chat", "employee_search"],
     );
 
-    expect(text).toContain("You can now use find_skills_and_tools, run_tool.");
+    expect(text).toContain("You can now use find_skills_and_tools, read_skill_files, run_tool.");
     // The regression: a withheld feature used to leave these named in "Remote tools: ..."
     // while being unusable and unadvertised.
     expect(text).not.toContain("Remote tools:");
@@ -109,7 +109,7 @@ describe("the assembled setup output", () => {
   it("promotes the remote's tools into the one usable list when policy allows", async () => {
     const text = await setupText({ features: {} }, ["search", "chat"]);
 
-    expect(text).toContain("You can now use find_skills_and_tools, run_tool, search, chat.");
+    expect(text).toContain("You can now use find_skills_and_tools, read_skill_files, run_tool, search, chat.");
     expect(text).not.toContain("Remote tools:");
   });
 });
