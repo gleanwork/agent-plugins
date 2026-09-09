@@ -1,4 +1,4 @@
-import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import type { Client } from "@modelcontextprotocol/client";
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { EmptyResultSchema } from "@modelcontextprotocol/sdk/types.js";
