@@ -67,10 +67,8 @@ export class GleanOAuthClientProvider implements OAuthClientProvider {
   constructor() {
     const stored = loadCredentials();
     if (stored) {
-      this._tokens = stored.tokens as StoredOAuthTokens | undefined;
-      this._clientInfo = stored.clientInfo as
-        | StoredOAuthClientInformation
-        | undefined;
+      this._tokens = stored.tokens;
+      this._clientInfo = stored.clientInfo;
     }
   }
 

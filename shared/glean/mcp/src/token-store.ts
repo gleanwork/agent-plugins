@@ -1,3 +1,7 @@
+import type {
+  StoredOAuthClientInformation,
+  StoredOAuthTokens,
+} from "@modelcontextprotocol/client";
 import fs from "node:fs";
 import path from "node:path";
 import { serverDataDir } from "./data-dir.js";
@@ -11,8 +15,8 @@ function credentialsFile(): string {
 }
 
 interface StoredCredentials {
-  tokens?: unknown;
-  clientInfo?: unknown;
+  tokens?: StoredOAuthTokens;
+  clientInfo?: StoredOAuthClientInformation;
 }
 
 export function loadCredentials(): StoredCredentials | undefined {
@@ -24,7 +28,10 @@ export function loadCredentials(): StoredCredentials | undefined {
   }
 }
 
-export function saveCredentials(tokens: unknown, clientInfo: unknown): void {
+export function saveCredentials(
+  tokens: StoredOAuthTokens | undefined,
+  clientInfo: StoredOAuthClientInformation | undefined,
+): void {
   try {
     const filePath = credentialsFile();
     const dir = path.dirname(filePath);
