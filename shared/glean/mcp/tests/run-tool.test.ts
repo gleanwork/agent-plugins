@@ -1005,38 +1005,120 @@ describe("handleRunTool (HITL)", () => {
     ]);
   });
 
-  it("fails closed when the remote approval lookup is malformed", async () => {
+  it.each([
+    {
+      failure: "throws",
+      options: { approvalError: new Error("503 unavailable") },
+    },
+    {
+      failure: "returns a tool error",
+      options: {
+        approvalResult: {
+          isError: true,
+          content: [{ type: "text", text: "approval service unavailable" }],
+          structuredContent: { requires_approval: false },
+        },
+      },
+    },
+    {
+      failure: "returns malformed JSON",
+      options: {
+        approvalResult: { content: [{ type: "text", text: "not JSON" }] },
+      },
+    },
+    {
+      failure: "omits requires_approval",
+      options: {
+        approvalResult: { content: [{ type: "text", text: "{}" }] },
+      },
+    },
+    {
+      failure: "returns an empty response",
+      options: { approvalResult: { content: [] } },
+    },
+    {
+      failure: "returns a non-boolean requires_approval",
+      options: {
+        approvalResult: {
+          content: [],
+          structuredContent: { requires_approval: "false" },
+        },
+      },
+    },
+  ])("requires approval when the remote lookup $failure", async ({ options }) => {
     vi.stubEnv("ENABLE_HITL", "true");
-    const remote = makeRemote({
-      approvalResult: { content: [{ type: "text", text: "{}" }] },
+    const remote = makeRemote(options);
+    const elicit = vi.fn().mockImplementation(async () => {
+      expect(remote.downstreamCall).not.toHaveBeenCalled();
+      return approvalResult("Allow");
     });
-    const server = makeServer({ elicitation: true });
+    const server = makeServer({ elicitation: true, elicit });
+    // A stale local grant must not suppress the fallback approval prompt.
+    await writeToolJson(tmpDir, "jirasearch", { requires_approval: false });
 
     const result = await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
 
-    expect(result.isError).toBe(true);
-    expect((result.content[0] as { text: string }).text).toContain(
-      "requires approval",
-    );
-    expect(server.elicitInput).not.toHaveBeenCalled();
+    expect(result).toEqual({ content: [{ type: "text", text: "ok" }] });
+    expect(elicit).toHaveBeenCalledTimes(1);
+    expect(remote.downstreamCall).toHaveBeenCalledTimes(1);
     expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toEqual([
       "get_tool_approval",
+      "run_tool",
     ]);
+    expect(remote.callTool.mock.calls[1][0].arguments).toEqual(baseArgs);
   });
 
-  it("fails closed when the remote approval lookup errors", async () => {
+  it.each([
+    { response: approvalResult("Deny"), outcome: "declined" },
+    { response: { action: "cancel" }, outcome: "cancelled" },
+  ])("does not execute when fallback approval is $outcome", async ({ response, outcome }) => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote({ approvalError: new Error("503 unavailable") });
-    const server = makeServer({ elicitation: true });
+    const elicit = vi.fn().mockResolvedValue(response);
+    const server = makeServer({ elicitation: true, elicit });
 
     const result = await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
 
+    expect(elicit).toHaveBeenCalledTimes(1);
+    expect((result.content[0] as { text: string }).text).toContain(outcome);
+    expect(remote.downstreamCall).not.toHaveBeenCalled();
+    expect(remote.callTool).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not execute when the fallback approval prompt times out", async () => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote({ approvalError: new Error("503 unavailable") });
+    const elicit = vi.fn().mockRejectedValue(new Error("Request timed out"));
+    const server = makeServer({ elicitation: true, elicit });
+
+    const result = await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+
+    expect(elicit).toHaveBeenCalledTimes(1);
     expect(result.isError).toBe(true);
     expect((result.content[0] as { text: string }).text).toContain(
       "The action was NOT executed",
     );
-    expect(server.elicitInput).not.toHaveBeenCalled();
+    expect(remote.downstreamCall).not.toHaveBeenCalled();
     expect(remote.callTool).toHaveBeenCalledTimes(1);
+  });
+
+  it("rechecks remote approval after a lookup failure instead of caching the fallback", async () => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote({ requiresApproval: false });
+    remote.callTool.mockRejectedValueOnce(new Error("503 unavailable"));
+    const server = makeServer({ elicitation: true });
+
+    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+
+    expect(server.elicitInput).toHaveBeenCalledTimes(1);
+    expect(remote.downstreamCall).toHaveBeenCalledTimes(2);
+    expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toEqual([
+      "get_tool_approval",
+      "run_tool",
+      "get_tool_approval",
+      "run_tool",
+    ]);
   });
 
   it("skips the elicitation gate and executes directly in bypassPermissions mode", async () => {

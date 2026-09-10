@@ -367,8 +367,8 @@ function approvalResponsePayload(result: CallToolResult): unknown {
  *
  * This is deliberately a per-call lookup. The answer is not read from skill files,
  * stored in this process, or persisted locally. A missing, malformed, or failed
- * response fails closed so the downstream `run_tool` call cannot proceed without a
- * current remote decision.
+ * response throws so the caller can default to requiring approval through the
+ * normal approval gate rather than aborting the downstream call.
  */
 export async function getToolApproval(
   remoteClient: Client,
@@ -399,26 +399,6 @@ export async function getToolApproval(
     );
   }
   return payload.requires_approval;
-}
-
-function approvalLookupFailure(
-  toolName: string,
-  error: unknown,
-): CallToolResult {
-  const detail = error instanceof Error ? error.message : String(error);
-  console.error(`[get_tool_approval] ${toolName}: ${detail}`);
-  return {
-    content: [
-      {
-        type: "text",
-        text:
-          `Could not determine whether ${toolName} requires approval from the ` +
-          `remote settings. The action was NOT executed. Retry when the approval ` +
-          `settings are available.`,
-      },
-    ],
-    isError: true,
-  };
 }
 
 export async function handleRunTool(
@@ -477,11 +457,14 @@ export async function handleRunTool(
     throw err;
   }
 
-  let requiresApproval: boolean;
+  let requiresApproval = true;
   try {
     requiresApproval = await getToolApproval(remoteClient, serverId, toolName);
   } catch (err) {
-    return approvalLookupFailure(toolName, err);
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[get_tool_approval] ${toolName}: ${detail}; defaulting to requires_approval=true`,
+    );
   }
 
   const hitlEnabled = process.env.ENABLE_HITL === "true";
