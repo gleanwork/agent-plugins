@@ -163,12 +163,14 @@ interface ToolMetadata {
   description?: string;
   server_id?: string;
   inputSchema?: ToolInputSchema;
+  annotations?: Tool["annotations"];
 }
 
-async function findToolJson(
+async function findToolJsons(
   skillsBaseDir: string,
   toolName: string,
-): Promise<ToolMetadata | null> {
+): Promise<ToolMetadata[]> {
+  const metadata: ToolMetadata[] = [];
   try {
     const skillDirs = await fs.readdir(skillsBaseDir, { withFileTypes: true });
     for (const dir of skillDirs) {
@@ -176,7 +178,10 @@ async function findToolJson(
       const toolPath = path.join(skillsBaseDir, dir.name, "tools", `${toolName}.json`);
       try {
         const content = await fs.readFile(toolPath, "utf-8");
-        return JSON.parse(content) as ToolMetadata;
+        const parsed: unknown = JSON.parse(content);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          metadata.push(parsed as ToolMetadata);
+        }
       } catch {
         continue;
       }
@@ -184,7 +189,24 @@ async function findToolJson(
   } catch {
     // Skills dir doesn't exist or can't be read
   }
-  return null;
+  return metadata;
+}
+
+// Only downstream annotations for this exact server/tool can exempt a failed
+// lookup from approval. Conflicting cached copies or unknown annotations must
+// not suppress the gate. Cached requires_approval preferences are never read.
+function isKnownReadOnlyTool(
+  metadata: ToolMetadata[],
+  serverId: string,
+  toolName: string,
+): boolean {
+  const matches = metadata.filter(
+    (tool) => tool.server_id === serverId && tool.name === toolName,
+  );
+  return matches.length > 0 && matches.every(({ annotations }) =>
+    annotations?.readOnlyHint === true &&
+    (annotations.destructiveHint === undefined || annotations.destructiveHint === false),
+  );
 }
 
 // A stdio server's only client signal is clientInfo.name; Cursor reports
@@ -367,8 +389,8 @@ function approvalResponsePayload(result: CallToolResult): unknown {
  *
  * This is deliberately a per-call lookup. The answer is not read from skill files,
  * stored in this process, or persisted locally. A missing, malformed, or failed
- * response throws so the caller can default to requiring approval through the
- * normal approval gate rather than aborting the downstream call.
+ * response throws so the caller can require approval unless the downstream tool
+ * is known to be read-only, rather than aborting the downstream call.
  */
 export async function getToolApproval(
   remoteClient: Client,
@@ -420,10 +442,11 @@ export async function handleRunTool(
     };
   }
 
-  // Load the downstream tool's metadata only for inputSchema. Approval is not
-  // taken from this file; it is fetched from the remote control plane below for
-  // every attempted downstream call.
-  const toolMeta = await findToolJson(skillsBaseDir, toolName);
+  // Cache files supply inputSchema and downstream annotations for the read-only
+  // fallback. Approval preferences are still fetched remotely on every call;
+  // cached requires_approval values are never used.
+  const toolMetadata = await findToolJsons(skillsBaseDir, toolName);
+  const toolMeta = toolMetadata[0];
 
   // Refuse before reading any model-supplied path. Disabled file_args must be
   // inert, not merely absent from the advertised schema.
@@ -461,9 +484,10 @@ export async function handleRunTool(
   try {
     requiresApproval = await getToolApproval(remoteClient, serverId, toolName);
   } catch (err) {
+    requiresApproval = !isKnownReadOnlyTool(toolMetadata, serverId, toolName);
     const detail = err instanceof Error ? err.message : String(err);
     console.error(
-      `[get_tool_approval] ${toolName}: ${detail}; defaulting to requires_approval=true`,
+      `[get_tool_approval] ${toolName}: ${detail}; defaulting to requires_approval=${requiresApproval}`,
     );
   }
 

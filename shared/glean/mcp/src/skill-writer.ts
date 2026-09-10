@@ -35,11 +35,11 @@ function parseFrontmatter(content: string): Record<string, string> {
 }
 
 /**
- * Keep approval requirements out of the local skill cache. The remote
- * get_tool_approval lookup is the only source of truth, so a stale or hand-edited
- * skill file must not retain a second approval setting for the plugin or the model
- * to read. Other tool metadata, especially inputSchema, remains cached for argument
- * shaping and prompt construction.
+ * Keep approval preferences out of the local skill cache. The remote
+ * get_tool_approval lookup is the source of current preferences, so a stale or
+ * hand-edited skill file must not retain a second approval setting. Other tool
+ * metadata remains cached: inputSchema for argument shaping, and downstream
+ * annotations for the read-only fallback when the remote lookup fails.
  */
 function sanitizeSkillFile(filePath: string, text: string): string {
   if (!/^tools[\\/]\S+\.json$/.test(filePath)) return text;

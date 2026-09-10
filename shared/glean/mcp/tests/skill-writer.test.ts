@@ -66,6 +66,7 @@ describe("writeSkillsToDisk", () => {
       "remote-approval": {
         "tools/action.json": JSON.stringify({
           requires_approval: true,
+          annotations: { readOnlyHint: true, destructiveHint: false },
           inputSchema: { properties: { title: { type: "string" } } },
         }),
       },
@@ -80,6 +81,7 @@ describe("writeSkillsToDisk", () => {
       ),
     );
     expect(toolJson.requires_approval).toBeUndefined();
+    expect(toolJson.annotations).toEqual({ readOnlyHint: true, destructiveHint: false });
     expect(toolJson.inputSchema.properties.title.type).toBe("string");
   });
 

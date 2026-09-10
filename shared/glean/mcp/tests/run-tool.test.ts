@@ -320,8 +320,9 @@ async function writeToolJson(
   baseDir: string,
   toolName: string,
   meta: Record<string, unknown>,
+  skillName = "some-skill",
 ) {
-  const toolsDir = path.join(baseDir, "some-skill", "tools");
+  const toolsDir = path.join(baseDir, skillName, "tools");
   await fs.mkdir(toolsDir, { recursive: true });
   await fs.writeFile(
     path.join(toolsDir, `${toolName}.json`),
@@ -1005,7 +1006,7 @@ describe("handleRunTool (HITL)", () => {
     ]);
   });
 
-  it.each([
+  const approvalLookupFailures = [
     {
       failure: "throws",
       options: { approvalError: new Error("503 unavailable") },
@@ -1045,7 +1046,9 @@ describe("handleRunTool (HITL)", () => {
         },
       },
     },
-  ])("requires approval when the remote lookup $failure", async ({ options }) => {
+  ];
+
+  it.each(approvalLookupFailures)("requires approval when the remote lookup $failure", async ({ options }) => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote(options);
     const elicit = vi.fn().mockImplementation(async () => {
@@ -1066,6 +1069,147 @@ describe("handleRunTool (HITL)", () => {
       "run_tool",
     ]);
     expect(remote.callTool.mock.calls[1][0].arguments).toEqual(baseArgs);
+  });
+
+  it.each(approvalLookupFailures)("skips approval for a known read-only tool when the lookup $failure", async ({ options }) => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote(options);
+    const server = makeServer({ elicitation: true });
+    await writeToolJson(tmpDir, baseArgs.tool_name, {
+      name: baseArgs.tool_name,
+      server_id: baseArgs.server_id,
+      annotations: { readOnlyHint: true, destructiveHint: false },
+      requires_approval: true, // Cached preferences must still be ignored.
+    });
+
+    const result = await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+
+    expect(result).toEqual({ content: [{ type: "text", text: "ok" }] });
+    expect(server.elicitInput).not.toHaveBeenCalled();
+    expect(remote.downstreamCall).toHaveBeenCalledTimes(1);
+    expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toEqual([
+      "get_tool_approval",
+      "run_tool",
+    ]);
+    expect(remote.callTool.mock.calls[1][0].arguments).toEqual(baseArgs);
+  });
+
+  it.each([
+    { reason: "write tool", metadata: { annotations: { readOnlyHint: false } } },
+    { reason: "missing annotations", metadata: { annotations: undefined } },
+    { reason: "null annotations", metadata: { annotations: null } },
+    { reason: "missing read-only hint", metadata: { annotations: {} } },
+    {
+      reason: "destructive tool",
+      metadata: { annotations: { readOnlyHint: true, destructiveHint: true } },
+    },
+    {
+      reason: "non-boolean read-only hint",
+      metadata: { annotations: { readOnlyHint: "true" } },
+    },
+    {
+      reason: "non-boolean destructive hint",
+      metadata: { annotations: { readOnlyHint: true, destructiveHint: "false" } },
+    },
+    { reason: "different server", metadata: { server_id: "other-server" } },
+    { reason: "missing server", metadata: { server_id: undefined } },
+    { reason: "different tool", metadata: { name: "other-tool" } },
+    { reason: "missing tool name", metadata: { name: undefined } },
+  ])("requires fallback approval for $reason", async ({ metadata }) => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote({ approvalError: new Error("503 unavailable") });
+    const server = makeServer({ elicitation: true });
+    await writeToolJson(tmpDir, baseArgs.tool_name, {
+      name: baseArgs.tool_name,
+      server_id: baseArgs.server_id,
+      annotations: { readOnlyHint: true },
+      ...metadata,
+    });
+
+    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+
+    expect(server.elicitInput).toHaveBeenCalledTimes(1);
+    expect(remote.downstreamCall).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    {
+      scenario: "ignores same-name tools on another server",
+      otherMetadata: { server_id: "other-server", annotations: { readOnlyHint: false } },
+      requiresApproval: false,
+    },
+    {
+      scenario: "requires approval for conflicting copies",
+      otherMetadata: { annotations: { readOnlyHint: false } },
+      requiresApproval: true,
+    },
+    {
+      scenario: "requires approval when a matching copy has no annotations",
+      otherMetadata: { annotations: undefined },
+      requiresApproval: true,
+    },
+    {
+      scenario: "accepts consistently read-only copies",
+      otherMetadata: { annotations: { readOnlyHint: true } },
+      requiresApproval: false,
+    },
+  ])("read-only fallback $scenario", async ({ otherMetadata, requiresApproval }) => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote({ approvalError: new Error("503 unavailable") });
+    const server = makeServer({ elicitation: true });
+    const metadata = {
+      name: baseArgs.tool_name,
+      server_id: baseArgs.server_id,
+      annotations: { readOnlyHint: true },
+    };
+    await writeToolJson(tmpDir, baseArgs.tool_name, { ...metadata, ...otherMetadata }, "a-skill");
+    await writeToolJson(tmpDir, baseArgs.tool_name, metadata, "z-skill");
+
+    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+
+    expect(server.elicitInput).toHaveBeenCalledTimes(requiresApproval ? 1 : 0);
+    expect(remote.downstreamCall).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([true, false])("uses a successful remote requires_approval=%s over conflicting annotations", async (requiresApproval) => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote({ requiresApproval });
+    const server = makeServer({ elicitation: true });
+    await writeToolJson(tmpDir, baseArgs.tool_name, {
+      name: baseArgs.tool_name,
+      server_id: baseArgs.server_id,
+      // A read-only hint conflicts with approval=true, and vice versa.
+      annotations: { readOnlyHint: requiresApproval },
+    });
+
+    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+
+    expect(server.elicitInput).toHaveBeenCalledTimes(requiresApproval ? 1 : 0);
+    expect(remote.downstreamCall).toHaveBeenCalledTimes(1);
+  });
+
+  it("rechecks remote approval after a read-only fallback", async () => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote({ requiresApproval: true });
+    remote.callTool.mockRejectedValueOnce(new Error("503 unavailable"));
+    const server = makeServer({ elicitation: true });
+    await writeToolJson(tmpDir, baseArgs.tool_name, {
+      name: baseArgs.tool_name,
+      server_id: baseArgs.server_id,
+      annotations: { readOnlyHint: true },
+    });
+
+    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+
+    expect(server.elicitInput).toHaveBeenCalledTimes(1);
+    expect(remote.downstreamCall).toHaveBeenCalledTimes(2);
+    expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toEqual([
+      "get_tool_approval",
+      "run_tool",
+      "get_tool_approval",
+      "run_tool",
+    ]);
   });
 
   it.each([
