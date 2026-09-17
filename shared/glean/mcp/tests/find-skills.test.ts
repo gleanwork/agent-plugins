@@ -5,8 +5,12 @@ import os from "node:os";
 import { handleFindSkills } from "../src/tools/find-skills.js";
 import type { SkillsMap } from "../src/types.js";
 
-function createMockClient(skills: SkillsMap) {
+const listTools = (...names: string[]) =>
+  vi.fn().mockResolvedValue({ tools: names.map((name) => ({ name })) });
+
+function createMockClient(skills: SkillsMap, remoteName = "find_skills_and_tools") {
   return {
+    listTools: listTools(remoteName),
     callTool: vi.fn().mockResolvedValue({
       content: [
         {
@@ -32,7 +36,7 @@ describe("handleFindSkills", () => {
     await fs.rm(tmpDir, { recursive: true, force: true });
   });
 
-  it("calls find_skills and writes skill files", async () => {
+  it("calls find_skills_and_tools and writes skill files", async () => {
     const mockClient = createMockClient({
       "search-jira": {
         "SKILL.md":
@@ -50,7 +54,7 @@ describe("handleFindSkills", () => {
 
     expect(mockClient.callTool).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: "find_skills",
+        name: "find_skills_and_tools",
         arguments: {},
       }),
       expect.objectContaining({ timeout: expect.any(Number) }),
@@ -75,7 +79,7 @@ describe("handleFindSkills", () => {
 
     expect(mockClient.callTool).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: "find_skills",
+        name: "find_skills_and_tools",
         arguments: { queries: ["create a calendar event"] },
       }),
       expect.objectContaining({ timeout: expect.any(Number) }),
@@ -91,7 +95,7 @@ describe("handleFindSkills", () => {
 
     expect(mockClient.callTool).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: "find_skills",
+        name: "find_skills_and_tools",
         arguments: { queries: ["search emails", "create calendar event"] },
       }),
       expect.objectContaining({ timeout: expect.any(Number) }),
@@ -100,6 +104,7 @@ describe("handleFindSkills", () => {
 
   it("returns empty XML when response has no skills field", async () => {
     const mockClient = {
+      listTools: listTools("find_skills_and_tools"),
       callTool: vi.fn().mockResolvedValue({
         content: [{ type: "text", text: JSON.stringify({ unexpected: true }) }],
       }),
@@ -120,6 +125,7 @@ describe("handleFindSkills", () => {
 
   it("handles missing text content gracefully", async () => {
     const mockClient = {
+      listTools: listTools("find_skills_and_tools"),
       callTool: vi.fn().mockResolvedValue({ content: [] }),
       close: vi.fn(),
     } as any;
@@ -131,6 +137,7 @@ describe("handleFindSkills", () => {
 
   it("throws with upstream message when find_skills returns an error", async () => {
     const mockClient = {
+      listTools: listTools("find_skills"),
       callTool: vi.fn().mockResolvedValue({
         content: [{ type: "text", text: "backend unavailable" }],
         isError: true,
@@ -141,5 +148,21 @@ describe("handleFindSkills", () => {
     await expect(
       handleFindSkills(mockClient, tmpDir, {}),
     ).rejects.toThrow("backend unavailable");
+  });
+
+  it("falls back to legacy find_skills when the host has not been renamed", async () => {
+    const mockClient = createMockClient({}, "find_skills");
+    await handleFindSkills(mockClient, tmpDir, {});
+    expect(mockClient.callTool).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "find_skills" }),
+      expect.anything(),
+    );
+  });
+
+  it("resolves the remote name once per client", async () => {
+    const mockClient = createMockClient({});
+    await handleFindSkills(mockClient, tmpDir, {});
+    await handleFindSkills(mockClient, tmpDir, {});
+    expect(mockClient.listTools).toHaveBeenCalledTimes(1);
   });
 });
