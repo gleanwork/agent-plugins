@@ -9,6 +9,10 @@ vi.mock("node:os", async () => {
   return { ...actual, homedir: () => tmpDir };
 });
 
+vi.mock("node:timers/promises", () => ({
+  setTimeout: (delay: number) => new Promise((resolve) => setTimeout(resolve, delay)),
+}));
+
 vi.mock("node:child_process", () => ({
   exec: vi.fn(),
   execFile: vi.fn(),
@@ -27,13 +31,15 @@ describe("GleanOAuthClientProvider", () => {
   const gleanDir = path.join(tmpDir, ".glean");
 
   beforeEach(() => {
-    delete process.env.PLUGIN_DATA_DIR;
+    vi.stubEnv("PLUGIN_DATA_DIR", gleanDir);
     fs.rmSync(gleanDir, { recursive: true, force: true });
     vi.clearAllMocks();
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     fs.rmSync(gleanDir, { recursive: true, force: true });
   });
 
@@ -167,6 +173,7 @@ describe("GleanOAuthClientProvider", () => {
 
   it("invalidateCredentials('tokens') clears when there is no newer token on disk", async () => {
     const provider = new GleanOAuthClientProvider();
+    provider.saveClientInformation({ client_id: "cid" });
     provider.saveTokens({ access_token: "T0", refresh_token: "R0" } as any);
     expect(provider.tokens()?.access_token).toBe("T0");
 
@@ -181,34 +188,51 @@ describe("GleanOAuthClientProvider", () => {
     expect(raw.tokens).toBeUndefined();
   });
 
-  it("invalidateCredentials('tokens') adopts a token that lands during the grace window", async () => {
-    // The winner's write lands just after the loser's invalid_grant.
+  it("adopts a sibling token at the next 500 ms poll", async () => {
+    vi.useFakeTimers();
     const provider = new GleanOAuthClientProvider();
+    provider.saveClientInformation({ client_id: "cid" });
     provider.saveTokens({ access_token: "T0", refresh_token: "R0" } as any);
+    const completed = vi.fn();
+    const invalidation = provider.invalidateCredentials("tokens").then(completed);
 
-    const invalidation = provider.invalidateCredentials("tokens");
-    // Sibling's write lands mid-window.
-    setTimeout(() => {
-      writeCredFile(
-        { access_token: "T1", refresh_token: "R1" },
-        { client_id: "cid" },
-      );
-    }, 150);
+    await vi.advanceTimersByTimeAsync(150);
+    writeCredFile(
+      { access_token: "T1", refresh_token: "R1" },
+      { client_id: "cid" },
+    );
+    await vi.advanceTimersByTimeAsync(349);
+    expect(completed).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
     await invalidation;
 
     expect(provider.tokens()?.access_token).toBe("T1");
     const raw = JSON.parse(fs.readFileSync(credFile, "utf-8"));
-    expect(raw.tokens.access_token).toBe("T1"); // not clobbered with undefined
+    expect(raw.tokens.access_token).toBe("T1");
   });
 
-  it("skips the grace window when no refresh token was held (no race possible)", async () => {
+  it("skips the grace window when no refresh token was held", async () => {
+    vi.useFakeTimers();
     const provider = new GleanOAuthClientProvider();
-    provider.saveTokens({ access_token: "T0" } as any); // no refresh_token
+    provider.saveClientInformation({ client_id: "cid" });
+    provider.saveTokens({ access_token: "T0" } as any);
 
     const start = Date.now();
     await provider.invalidateCredentials("tokens");
 
-    expect(Date.now() - start).toBeLessThan(1000); // no 5s poll
+    expect(Date.now()).toBe(start);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(provider.tokens()).toBeUndefined();
+  });
+
+  it("skips the grace window without a retained client", async () => {
+    vi.useFakeTimers();
+    const provider = new GleanOAuthClientProvider();
+    provider.saveTokens({ access_token: "T0", refresh_token: "R0" } as any);
+
+    await provider.invalidateCredentials("tokens");
+
+    expect(vi.getTimerCount()).toBe(0);
     expect(provider.tokens()).toBeUndefined();
   });
 
@@ -271,15 +295,21 @@ describe("GleanOAuthClientProvider", () => {
   });
 
   it("invalidateCredentials('all') clears all in-memory state and deletes file", async () => {
+    vi.useFakeTimers();
     const provider = new GleanOAuthClientProvider();
-    provider.saveTokens({ access_token: "tok", token_type: "Bearer" } as any);
+    provider.saveTokens({ access_token: "tok", refresh_token: "refresh", token_type: "Bearer" } as any);
     provider.saveClientInformation({ client_id: "cid" } as any);
     provider.saveCodeVerifier("verifier");
     await provider.redirectToAuthorization(new URL("https://example.com/oauth/authorize?state=s1"));
     expect(fs.existsSync(path.join(gleanDir, "mcp-credentials.json"))).toBe(true);
 
+    writeCredFile(
+      { access_token: "sibling", refresh_token: "sibling-refresh" },
+      { client_id: "cid" },
+    );
     await provider.invalidateCredentials("all");
 
+    expect(vi.getTimerCount()).toBe(0);
     expect(provider.tokens()).toBeUndefined();
     expect(provider.clientInformation()).toBeUndefined();
     expect(provider.codeVerifier()).toBe("");
@@ -287,12 +317,17 @@ describe("GleanOAuthClientProvider", () => {
     expect(fs.existsSync(path.join(gleanDir, "mcp-credentials.json"))).toBe(false);
   });
 
-  it("invalidateCredentials('client') drops client but keeps tokens", async () => {
+  it("invalidateCredentials('client') drops client without waiting but keeps tokens", async () => {
+    vi.useFakeTimers();
     const provider = new GleanOAuthClientProvider();
-    provider.saveTokens({ access_token: "tok" } as any);
-    provider.saveClientInformation({ client_id: "cid" } as any);
+    const tokens = { access_token: "tok", refresh_token: "refresh", token_type: "Bearer" };
+    provider.saveTokens(tokens);
+    provider.saveClientInformation({ client_id: "cid" });
+
     await provider.invalidateCredentials("client");
-    expect(provider.tokens()).toEqual({ access_token: "tok" });
+
+    expect(vi.getTimerCount()).toBe(0);
+    expect(provider.tokens()).toEqual(tokens);
     expect(provider.clientInformation()).toBeUndefined();
   });
 

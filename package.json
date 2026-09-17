@@ -1,6 +1,6 @@
 {
   "name": "@gleanwork/agent-plugins",
-  "version": "3.3.0",
+  "version": "3.4.2",
   "description": "Official Glean agent plugins for AI coding tools.",
   "license": "MIT",
   "author": {
@@ -10,10 +10,11 @@
   },
   "type": "module",
   "scripts": {
-    "build": "pluginpack build",
+    "build": "pluginpack build && npm run check:plugin-changelogs",
     "build:bundle": "node shared/glean/mcp/build.mjs",
     "clean": "pluginpack clean",
     "check:no-shell": "node scripts/check-no-shell-scripts.mjs",
+    "check:plugin-changelogs": "node scripts/check-plugin-changelogs.mjs",
     "check:release-version": "node scripts/check-release-version.mjs",
     "prune": "pluginpack prune",
     "typecheck:bundle": "tsc --noEmit -p shared/glean/mcp/tsconfig.json",
@@ -24,11 +25,13 @@
     "release": "release-it"
   },
   "dependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
     "@modelcontextprotocol/sdk": "^1.12.1",
     "yaml": "^2.7.0"
   },
   "devDependencies": {
     "@gleanwork/pluginpack": "^0.11.0",
+    "@modelcontextprotocol/server": "^2.0.0",
     "@release-it/bumper": "^8.0.0",
     "@release-it/conventional-changelog": "^11.0.1",
     "@types/node": "^22.0.0",
@@ -36,7 +39,8 @@
     "release-it": "^20.2.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "zod": "^4.6.1"
   },
   "//overrides": "Pin hono>=4.12.25 (CVE-2026-54290, transitive from @modelcontextprotocol/sdk); pin esbuild/vite to clear CVE blocks that prevented install. Mirrors glean-experimental-plugins overrides.",
   "overrides": {

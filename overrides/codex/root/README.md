@@ -17,14 +17,12 @@ codex plugin add glean@glean-codex-plugins
 codex plugin add glean-dev-docs@glean-codex-plugins
 ```
 
-Before starting Codex, connect the MCP server used by the plugin you installed:
+Start Codex and prompt the harness to set up Glean, for example: `Set up Glean
+for me`. Complete the browser OAuth flow when prompted.
 
-- **Glean enterprise knowledge:** get your server URL and name from the
-  [Glean MCP configurator](https://app.glean.com/settings/install?mcpConfigure=true),
-  then run `codex mcp add glean --url <server-url>/mcp/<server-name>` followed by
-  `codex mcp login glean`.
-- **Glean developer docs:** run
-  `codex mcp add glean-dev-docs --url https://developers.glean.com/mcp`.
+The **Glean developer docs** plugin uses a separate public MCP server. If you
+installed that plugin, add it before starting a new Codex task:
+`codex mcp add glean-dev-docs --url https://developers.glean.com/mcp`.
 
 Then start a new Codex task so the bundled skills and MCP tools are available.
 

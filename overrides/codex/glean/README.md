@@ -12,18 +12,11 @@ codex plugin marketplace add gleanwork/codex-plugins
 codex plugin add glean@glean-codex-plugins
 ```
 
-### 2. Configure your Glean MCP server
+### 2. Set up Glean
 
-Get your server URL and server name from the
-[Glean MCP configurator](https://app.glean.com/settings/install?mcpConfigure=true), then run:
-
-```bash
-codex mcp add glean --url https://YOUR-INSTANCE-be.glean.com/mcp/YOUR-SERVER-NAME
-codex mcp login glean
-```
-
-Complete the browser OAuth flow, then verify with `codex mcp list`. Start a new
-Codex task so both the bundled skills and Glean MCP tools are available.
+Start a new Codex task and prompt the harness: `Set up Glean for me`. Complete
+the browser OAuth flow when prompted, then start a new task so both the bundled
+skills and Glean MCP tools are available.
 
 ## What's Included
 
@@ -42,7 +35,6 @@ per-skill install. They cover:
 
 - [Codex](https://developers.openai.com/codex) with plugin support
 - A Glean account with MCP access
-- Your Glean MCP server URL and server name
 
 ## Support
 

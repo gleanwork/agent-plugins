@@ -1,9 +1,9 @@
-import type { OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth.js";
 import type {
-  OAuthClientInformationMixed,
+  OAuthClientProvider,
   OAuthClientMetadata,
-  OAuthTokens,
-} from "@modelcontextprotocol/sdk/shared/auth.js";
+  StoredOAuthClientInformation,
+  StoredOAuthTokens,
+} from "@modelcontextprotocol/client";
 import { execFile, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -15,11 +15,16 @@ import {
   saveCredentials,
 } from "./token-store.js";
 
-export type InvalidationScope = "all" | "client" | "tokens" | "verifier";
+export type InvalidationScope =
+  | "all"
+  | "client"
+  | "tokens"
+  | "verifier"
+  | "discovery";
 
 // Grace window for a sibling's in-flight refresh to land on disk.
 const ROTATION_GRACE_MS = 2000;
-const ROTATION_POLL_MS = 100;
+const ROTATION_POLL_MS = 500;
 
 /**
  * Open `url` in the user's default browser. Used for the self-open sign-in
@@ -49,8 +54,8 @@ export function openBrowser(url: string): void {
 }
 
 export class GleanOAuthClientProvider implements OAuthClientProvider {
-  private _clientInfo: OAuthClientInformationMixed | undefined;
-  private _tokens: OAuthTokens | undefined;
+  private _clientInfo: StoredOAuthClientInformation | undefined;
+  private _tokens: StoredOAuthTokens | undefined;
   private _codeVerifier = "";
   private _pendingAuthCode: string | undefined;
   // True between issuing an authorize URL and either receiving tokens or
@@ -65,13 +70,13 @@ export class GleanOAuthClientProvider implements OAuthClientProvider {
    * refresh failure). Used by the plugin to push a tools/list_changed
    * notification so the host re-fetches the dynamic tool surface.
    */
-  onTokensChanged?: (tokens: OAuthTokens | undefined) => void;
+  onTokensChanged?: (tokens: StoredOAuthTokens | undefined) => void;
 
   constructor() {
     const stored = loadCredentials();
     if (stored) {
-      this._tokens = stored.tokens as OAuthTokens | undefined;
-      this._clientInfo = stored.clientInfo as OAuthClientInformationMixed | undefined;
+      this._tokens = stored.tokens;
+      this._clientInfo = stored.clientInfo;
     }
   }
 
@@ -81,10 +86,10 @@ export class GleanOAuthClientProvider implements OAuthClientProvider {
     const stored = loadCredentials();
     if (!stored) return;
     if (stored.tokens) {
-      this._tokens = stored.tokens as OAuthTokens;
+      this._tokens = stored.tokens;
     }
     if (stored.clientInfo) {
-      this._clientInfo = stored.clientInfo as OAuthClientInformationMixed;
+      this._clientInfo = stored.clientInfo;
     }
   }
 
@@ -113,21 +118,21 @@ export class GleanOAuthClientProvider implements OAuthClientProvider {
     };
   }
 
-  clientInformation(): OAuthClientInformationMixed | undefined {
+  clientInformation(): StoredOAuthClientInformation | undefined {
     return this._clientInfo;
   }
 
-  saveClientInformation(info: OAuthClientInformationMixed): void {
+  saveClientInformation(info: StoredOAuthClientInformation): void {
     this._clientInfo = info;
     saveCredentials(this._tokens, this._clientInfo);
   }
 
-  tokens(): OAuthTokens | undefined {
+  tokens(): StoredOAuthTokens | undefined {
     this.syncTokensFromDisk();
     return this._tokens;
   }
 
-  saveTokens(tokens: OAuthTokens): void {
+  saveTokens(tokens: StoredOAuthTokens): void {
     this._tokens = tokens;
     this._authUrlPending = false;
     saveCredentials(this._tokens, this._clientInfo);
@@ -150,9 +155,13 @@ export class GleanOAuthClientProvider implements OAuthClientProvider {
         saveCredentials(this._tokens, undefined);
         break;
       case "tokens": {
-        // Usually a sibling's rotation — try adopting before clearing.
+        // SDK auth() invalidates tokens after invalid_grant, which can mean a
+        // sibling already rotated our refresh token. Client errors invalidate
+        // "client" before "tokens" instead: without a retained client, clear
+        // immediately. A newer token must not cancel a client or full reset.
         const previousAccessToken = this._tokens?.access_token;
         if (
+          this._clientInfo &&
           this._tokens?.refresh_token &&
           (await this.waitForSiblingRefresh(previousAccessToken))
         ) {
@@ -164,6 +173,9 @@ export class GleanOAuthClientProvider implements OAuthClientProvider {
       }
       case "verifier":
         this._codeVerifier = "";
+        break;
+      case "discovery":
+        // This provider does not persist discovery metadata.
         break;
     }
     if (

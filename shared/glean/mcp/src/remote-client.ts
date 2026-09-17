@@ -1,10 +1,16 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js";
-import { OAuthError } from "@modelcontextprotocol/sdk/server/auth/errors.js";
+import {
+  Client,
+  StreamableHTTPClientTransport,
+  UnauthorizedError,
+  OAuthError,
+  OAuthErrorCode,
+  type ElicitRequest,
+  type ElicitResult,
+} from "@modelcontextprotocol/client";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { GleanOAuthClientProvider } from "./auth-provider.js";
-import { PLUGIN_VERSION } from "./version.js";
+import { pluginVersionString } from "./version.js";
+import { negotiationMeta, recordPolicyFromResult } from "./policy/session.js";
 
 const GLEAN_PLUGIN = "GLEAN_PLUGIN";
 
@@ -104,6 +110,11 @@ function loggingFetch(
 
 export interface RemoteClientOptions {
   authProvider?: GleanOAuthClientProvider;
+  fetch?: typeof fetch;
+  elicitInput?: (
+    params: Exclude<ElicitRequest["params"], { mode: "url" }>,
+    options: { timeout: number },
+  ) => Promise<ElicitResult>;
 }
 
 export class AuthRequiredError extends Error {
@@ -154,7 +165,7 @@ function buildTransport(
 
   const transportOpts: ConstructorParameters<typeof StreamableHTTPClientTransport>[1] = {
     requestInit: { headers },
-    fetch: loggingFetch,
+    fetch: opts.fetch ?? loggingFetch,
   };
 
   if (opts.authProvider) {
@@ -212,9 +223,30 @@ export async function createRemoteClient(
   }
 
   const client = new Client(
-    { name: "glean", version: PLUGIN_VERSION },
-    { capabilities: {} },
+    { name: "glean", version: pluginVersionString() },
+    {
+      // The remote may return an input_required result only when the client
+      // declares the matching capability. Mirror the local host's form
+      // elicitation support instead of claiming a UI the plugin does not own.
+      capabilities: opts.elicitInput ? { elicitation: {} } : {},
+      // Probe for the 2026-07-28 protocol while retaining automatic fallback
+      // for older Glean deployments.
+      versionNegotiation: { mode: "auto" },
+    },
   );
+
+  if (opts.elicitInput) {
+    client.setRequestHandler("elicitation/create", async (request) => {
+      // We advertise form mode only, so the SDK rejects URL-mode requests
+      // before dispatching them here.
+      if (request.params.mode === "url") {
+        throw new Error("URL-mode elicitation is not supported by the local host");
+      }
+      return opts.elicitInput!(request.params, {
+        timeout: remoteToolTimeoutMs(),
+      });
+    });
+  }
 
   // Snapshot to detect a sibling's refresh between connect and failure.
   const accessTokenAtConnect = authProvider?.tokens()?.access_token;
@@ -224,7 +256,11 @@ export async function createRemoteClient(
   try {
     await withConnectLock(() => client.connect(transport));
   } catch (error) {
-    if (error instanceof UnauthorizedError && authProvider) {
+    if (!authProvider) {
+      throw error;
+    }
+
+    if (error instanceof UnauthorizedError) {
       const refreshedAccessToken = authProvider.tokens()?.access_token;
       if (
         !authRetry &&
@@ -246,7 +282,6 @@ export async function createRemoteClient(
     // (typically invalid_request); retry once if a sibling's grant lands in the
     // grace window.
     if (
-      authProvider &&
       !authRetry &&
       isRefreshOAuthError(error) &&
       (await authProvider.waitForSiblingRefresh(accessTokenAtConnect))
@@ -267,8 +302,8 @@ export async function createRemoteClient(
 function isRefreshOAuthError(error: unknown): boolean {
   return (
     error instanceof OAuthError &&
-    (error.errorCode === "invalid_request" ||
-      error.errorCode === "invalid_grant")
+    (error.code === OAuthErrorCode.InvalidRequest ||
+      error.code === OAuthErrorCode.InvalidGrant)
   );
 }
 
@@ -277,11 +312,14 @@ export async function callRemoteTool(
   name: string,
   args: Record<string, unknown>,
 ): Promise<CallToolResult> {
-  // Pass an explicit timeout so the call isn't capped at the SDK's 60s default.
-  // `undefined` for resultSchema keeps the SDK's CallToolResultSchema default.
-  const result = await client.callTool({ name, arguments: args }, undefined, {
-    timeout: remoteToolTimeoutMs(),
-  });
+  // Every downstream tool call reports the negotiated context and records any
+  // capability policy returned by the remote. Keep the explicit timeout so
+  // long-running Glean tools are not capped at the SDK's 60s default.
+  const result = await client.callTool(
+    { name, arguments: args, ...negotiationMeta() },
+    { timeout: remoteToolTimeoutMs() },
+  );
+  recordPolicyFromResult(result, `tools/call(${name})`);
   if (!("content" in result)) {
     return { content: [] };
   }

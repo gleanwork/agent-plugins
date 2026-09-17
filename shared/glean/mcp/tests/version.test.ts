@@ -12,7 +12,7 @@ import { createInterface } from "node:readline";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { PLUGIN_VERSION } from "../src/version.js";
+import { pluginVersion, pluginVersionString } from "../src/version.js";
 
 // Anchor to the test file, not cwd — vitest runs with --root shared/glean/mcp
 // while the process cwd stays at the repo root.
@@ -24,10 +24,9 @@ const readVersion = (manifest: string): string =>
   JSON.parse(readFileSync(manifest, "utf8")).version;
 
 describe("plugin version", () => {
-  it("reports the shipped manifest's version when run from source", () => {
-    expect(PLUGIN_VERSION).toBe(
-      readVersion(path.join(serverDir, "package.json")),
-    );
+  it("reports unknown when source runs without the build-time define", () => {
+    expect(pluginVersion()).toEqual({ version: "0.0.0", source: "unknown" });
+    expect(pluginVersionString()).toBe("0.0.0");
   });
 
   it("stays in step with the repo-root version that release-it bumps", () => {
@@ -38,8 +37,8 @@ describe("plugin version", () => {
   });
 
   it("advertises the version over MCP from the built bundle", async () => {
-    // Guards esbuild's handling of import.meta.url: unbundled the read resolves
-    // from src/, shipped it resolves from dist/.
+    // The build verifies both package versions, substitutes the constant, and
+    // asserts that the literal landed in the emitted bundle.
     execFileSync("node", ["shared/glean/mcp/build.mjs"], {
       cwd: repoRoot,
       stdio: "pipe",
