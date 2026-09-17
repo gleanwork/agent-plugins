@@ -192,9 +192,9 @@ async function findToolJsons(
   return metadata;
 }
 
-// Only downstream annotations for this exact server/tool can exempt a failed
-// lookup from approval. Conflicting cached copies or unknown annotations must
-// not suppress the gate. Cached requires_approval preferences are never read.
+// Read-only tools are always exempt from approval. Only downstream annotations
+// for this exact server/tool can skip the lookup; conflicting copies or unknown
+// annotations cannot. Cached requires_approval preferences are never read.
 function isKnownReadOnlyTool(
   metadata: ToolMetadata[],
   serverId: string,
@@ -387,10 +387,10 @@ function approvalResponsePayload(result: CallToolResult): unknown {
 /**
  * Ask the remote control plane whether this downstream tool requires approval.
  *
- * This is deliberately a per-call lookup. The answer is not read from skill files,
- * stored in this process, or persisted locally. A missing, malformed, or failed
- * response throws so the caller can require approval unless the downstream tool
- * is known to be read-only, rather than aborting the downstream call.
+ * Write tools and tools with unknown annotations use a fresh lookup on each call.
+ * Known read-only tools bypass this function entirely. The answer is never cached
+ * locally. A missing, malformed, or failed response throws so the caller can
+ * require approval rather than aborting the downstream call.
  */
 export async function getToolApproval(
   remoteClient: Client,
@@ -442,8 +442,8 @@ export async function handleRunTool(
     };
   }
 
-  // Cache files supply inputSchema and downstream annotations for the read-only
-  // fallback. Approval preferences are still fetched remotely on every call;
+  // Reuse cached inputSchema and downstream annotations for argument shaping and
+  // the read-only shortcut. Write-tool approval preferences are fetched remotely;
   // cached requires_approval values are never used.
   const toolMetadata = await findToolJsons(skillsBaseDir, toolName);
   const toolMeta = toolMetadata[0];
@@ -480,14 +480,19 @@ export async function handleRunTool(
     throw err;
   }
 
+  const remoteArgs = buildRemoteArgs(serverId, toolName, resolvedArgs);
+  // Read-only tools need no approval lookup, host capability check, or prompt.
+  if (isKnownReadOnlyTool(toolMetadata, serverId, toolName)) {
+    return callRemoteTool(remoteClient, "run_tool", remoteArgs);
+  }
+
   let requiresApproval = true;
   try {
     requiresApproval = await getToolApproval(remoteClient, serverId, toolName);
   } catch (err) {
-    requiresApproval = !isKnownReadOnlyTool(toolMetadata, serverId, toolName);
     const detail = err instanceof Error ? err.message : String(err);
     console.error(
-      `[get_tool_approval] ${toolName}: ${detail}; defaulting to requires_approval=${requiresApproval}`,
+      `[get_tool_approval] ${toolName}: ${detail}; defaulting to requires_approval=true`,
     );
   }
 
@@ -584,11 +589,7 @@ export async function handleRunTool(
     }
   }
 
-  return callRemoteTool(
-    remoteClient,
-    "run_tool",
-    buildRemoteArgs(serverId, toolName, resolvedArgs),
-  );
+  return callRemoteTool(remoteClient, "run_tool", remoteArgs);
 }
 
 /**

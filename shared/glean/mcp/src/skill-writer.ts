@@ -39,7 +39,7 @@ function parseFrontmatter(content: string): Record<string, string> {
  * get_tool_approval lookup is the source of current preferences, so a stale or
  * hand-edited skill file must not retain a second approval setting. Other tool
  * metadata remains cached: inputSchema for argument shaping, and downstream
- * annotations for the read-only fallback when the remote lookup fails.
+ * annotations so read-only tools skip the approval lookup and HITL entirely.
  */
 function sanitizeSkillFile(filePath: string, text: string): string {
   if (!/^tools[\\/]\S+\.json$/.test(filePath)) return text;
