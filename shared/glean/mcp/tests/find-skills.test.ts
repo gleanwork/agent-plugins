@@ -150,6 +150,20 @@ describe("handleFindSkills", () => {
     ).rejects.toThrow("backend unavailable");
   });
 
+  it("names the route misconfiguration when the remote answers with the lazy XML index", async () => {
+    const mockClient = {
+      listTools: listTools("find_skills_and_tools"),
+      callTool: vi.fn().mockResolvedValue({
+        content: [{ type: "text", text: "<available_skills>\n</available_skills>" }],
+      }),
+      close: vi.fn(),
+    } as any;
+
+    await expect(handleFindSkills(mockClient, tmpDir, {})).rejects.toThrow(
+      /gateway\/proxy/,
+    );
+  });
+
   it("falls back to legacy find_skills when the host has not been renamed", async () => {
     const mockClient = createMockClient({}, "find_skills");
     await handleFindSkills(mockClient, tmpDir, {});

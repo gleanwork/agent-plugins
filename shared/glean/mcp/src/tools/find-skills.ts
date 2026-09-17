@@ -44,6 +44,17 @@ export async function handleFindSkills(
     throw new Error(textContent.text || `${remoteName} failed`);
   }
 
+  // ponytail: lazy-disclosure surfaces (/mcp/default, skill-pack servers)
+  // answer with an XML index and expect read_skill_files; the plugin only
+  // speaks the gateway/proxy JSON map. Name the misconfiguration instead of
+  // surfacing "Unexpected token '<'".
+  if (textContent.text.trimStart().startsWith("<")) {
+    throw new Error(
+      `${remoteName} returned a lazy-disclosure XML index instead of the skills JSON map; ` +
+        "point the plugin at the /mcp/gateway/proxy route (check GLEAN_MCP_SERVER_URL).",
+    );
+  }
+
   const parsed = JSON.parse(textContent.text) as { skills?: SkillsMap };
   if (!parsed.skills || typeof parsed.skills !== "object") {
     console.error(

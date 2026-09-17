@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.4.2](https://github.com/gleanwork/agent-plugins/compare/v3.4.1...v3.4.2) (2026-09-03)
+
+### Bug Fixes
+
+* sync plugin changelogs after generation ([b7df133](https://github.com/gleanwork/agent-plugins/commit/b7df133796df5a8a25a0cde95d40a2197331f45a))
+
+### Documentation
+
+* **plugins:** update Glean plugin description ([f4a3e23](https://github.com/gleanwork/agent-plugins/commit/f4a3e23000efc50cfdea75dd3c11da06b26beb71))
+
 ## [3.4.1](https://github.com/gleanwork/agent-plugins/compare/v3.4.0...v3.4.1) (2026-09-02)
 
 ### Documentation
