@@ -61,6 +61,30 @@ describe("writeSkillsToDisk", () => {
     expect(toolJson.input_schema.properties.query.type).toBe("string");
   });
 
+  it("does not persist local approval requirements in tool metadata", async () => {
+    const skills: SkillsMap = {
+      "remote-approval": {
+        "tools/action.json": JSON.stringify({
+          requires_approval: true,
+          annotations: { readOnlyHint: true, destructiveHint: false },
+          inputSchema: { properties: { title: { type: "string" } } },
+        }),
+      },
+    };
+
+    await writeSkillsToDisk(skills, tmpDir);
+
+    const toolJson = JSON.parse(
+      await fs.readFile(
+        path.join(tmpDir, "remote-approval", "tools", "action.json"),
+        "utf-8",
+      ),
+    );
+    expect(toolJson.requires_approval).toBeUndefined();
+    expect(toolJson.annotations).toEqual({ readOnlyHint: true, destructiveHint: false });
+    expect(toolJson.inputSchema.properties.title.type).toBe("string");
+  });
+
   it("creates nested directories from slash-separated paths", async () => {
     const skills: SkillsMap = {
       "code-review": {
