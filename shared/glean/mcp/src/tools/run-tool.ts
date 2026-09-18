@@ -192,9 +192,10 @@ async function findToolJsons(
   return metadata;
 }
 
-// Read-only tools are always exempt from approval. Only downstream annotations
-// for this exact server/tool can skip the lookup; conflicting copies or unknown
-// annotations cannot. Cached requires_approval preferences are never read.
+// Match Glean's IsReadOnly in scio/go/core/mcp/server/utils_sdk_helpers.go:
+// readOnlyHint must be true and destructiveHint must be omitted or false.
+// Only downstream annotations for this exact server/tool can skip the lookup;
+// conflicting copies or unknown annotations cannot. Cached preferences are ignored.
 function isKnownReadOnlyTool(
   metadata: ToolMetadata[],
   serverId: string,
@@ -481,7 +482,8 @@ export async function handleRunTool(
   }
 
   const remoteArgs = buildRemoteArgs(serverId, toolName, resolvedArgs);
-  // Read-only tools need no approval lookup, host capability check, or prompt.
+  // Read-only tools are exempt from Glean's configurable approval requirements,
+  // so they do not need an approval lookup.
   if (isKnownReadOnlyTool(toolMetadata, serverId, toolName)) {
     return callRemoteTool(remoteClient, "run_tool", remoteArgs);
   }

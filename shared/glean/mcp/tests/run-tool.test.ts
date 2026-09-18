@@ -16,6 +16,7 @@ import {
   formatArgumentsForFile,
 } from "../src/tools/approval-args.js";
 import type { RunToolPolicy } from "../src/tools/run-tool.js";
+import { writeSkillsToDisk } from "../src/skill-writer.js";
 
 // The decision every install resolves to today, since production returns no policy.
 // Passed explicitly at each call site rather than defaulted, so a case that means to
@@ -879,6 +880,56 @@ describe("handleRunTool (HITL)", () => {
     expect(result.isError).toBe(true);
     expect(elicit).not.toHaveBeenCalled(); // no prompt for unreadable input
     expect(remote.callTool).not.toHaveBeenCalled();
+  });
+
+  // Mirror Glean's TestIsReadOnly cases, plus the other valid annotation combinations.
+  // Source: https://github.com/askscio/scio/blob/9f142a1ddc006f015cf63b6820b346653962fce7/go/core/mcp/server/utils_sdk_helpers_test.go#L706-L745
+  // This covers the local cache-to-execution path, not a live Glean backend.
+  it.each([
+    { scenario: "missing annotations", annotations: undefined, readOnly: false },
+    { scenario: "empty annotations", annotations: {}, readOnly: false },
+    { scenario: "read-only true, destructive omitted", annotations: { readOnlyHint: true }, readOnly: true },
+    { scenario: "read-only true, destructive false", annotations: { readOnlyHint: true, destructiveHint: false }, readOnly: true },
+    { scenario: "read-only true, destructive true", annotations: { readOnlyHint: true, destructiveHint: true }, readOnly: false },
+    { scenario: "read-only false, destructive omitted", annotations: { readOnlyHint: false }, readOnly: false },
+    { scenario: "read-only false, destructive false", annotations: { readOnlyHint: false, destructiveHint: false }, readOnly: false },
+    { scenario: "read-only false, destructive true", annotations: { readOnlyHint: false, destructiveHint: true }, readOnly: false },
+    { scenario: "read-only omitted, destructive false", annotations: { destructiveHint: false }, readOnly: false },
+    { scenario: "read-only omitted, destructive true", annotations: { destructiveHint: true }, readOnly: false },
+  ])("matches Glean IsReadOnly through skill caching and execution: $scenario", async ({ annotations, readOnly }) => {
+    vi.stubEnv("ENABLE_HITL", "true");
+    const remote = makeRemote({ requiresApproval: true });
+    const server = makeServer({ elicitation: true });
+    const toolFile = `tools/${baseArgs.tool_name}.json`;
+    await writeSkillsToDisk({
+      "read-only-parity": {
+        [toolFile]: JSON.stringify({
+          name: baseArgs.tool_name,
+          server_id: baseArgs.server_id,
+          inputSchema: { type: "object", properties: { query: { type: "string" } } },
+          annotations,
+          // A legacy, conflicting preference must not change the classification.
+          requires_approval: readOnly,
+        }),
+      },
+    }, tmpDir);
+    const cached = JSON.parse(await fs.readFile(
+      path.join(tmpDir, "read-only-parity", toolFile), "utf-8",
+    ));
+    expect(cached.annotations).toEqual(annotations);
+    expect(cached).not.toHaveProperty("requires_approval");
+
+    const result = await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+
+    expect(result).toEqual({ content: [{ type: "text", text: "ok" }] });
+    expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toEqual(
+      readOnly ? ["run_tool"] : ["get_tool_approval", "run_tool"],
+    );
+    expect(server.elicitInput).toHaveBeenCalledTimes(readOnly ? 0 : 1);
+    expect(remote.downstreamCall).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      name: "run_tool",
+      arguments: baseArgs,
+    }));
   });
 
   it.each([
