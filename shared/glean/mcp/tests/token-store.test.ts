@@ -10,19 +10,21 @@ vi.mock("node:os", async () => {
   return { ...actual, homedir: () => tmpDir };
 });
 
-const { clearCredentials, loadCredentials, saveCredentials } = await import(
-  "../src/token-store.js"
-);
+const { clearCredentials, loadCredentials, saveCredentials } =
+  await import("../src/token-store.js");
 
 describe("token-store", () => {
   const gleanDir = path.join(tmpDir, ".glean");
   const credFile = path.join(gleanDir, "mcp-credentials.json");
 
   beforeEach(() => {
+    vi.stubEnv("PLUGIN_DATA_DIR", gleanDir);
     fs.rmSync(gleanDir, { recursive: true, force: true });
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     fs.rmSync(gleanDir, { recursive: true, force: true });
   });
 
@@ -54,6 +56,41 @@ describe("token-store", () => {
     const stat = fs.statSync(credFile);
     const mode = stat.mode & 0o777;
     expect(mode).toBe(0o600);
+  });
+
+  it("sets the credentials directory to mode 0700", () => {
+    fs.mkdirSync(gleanDir, { recursive: true, mode: 0o755 });
+
+    saveCredentials({ access_token: "x" }, undefined);
+
+    expect(fs.statSync(gleanDir).mode & 0o777).toBe(0o700);
+  });
+
+  it("tightens a leftover temp file before replacing credentials", () => {
+    fs.mkdirSync(gleanDir, { recursive: true });
+    const tmpPath = path.join(gleanDir, `.mcp-credentials.json.${process.pid}.tmp`);
+    fs.writeFileSync(tmpPath, "stale", { mode: 0o644 });
+
+    saveCredentials({ access_token: "new" }, undefined);
+
+    expect(loadCredentials()?.tokens?.access_token).toBe("new");
+    expect(fs.statSync(credFile).mode & 0o777).toBe(0o600);
+    expect(fs.readdirSync(gleanDir)).toEqual(["mcp-credentials.json"]);
+  });
+
+  it("preserves credentials and removes the temp file when rename fails", () => {
+    const original = { access_token: "old" };
+    saveCredentials(original, { client_id: "cid" });
+    vi.spyOn(fs, "renameSync").mockImplementationOnce(() => {
+      throw new Error("rename blocked");
+    });
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    expect(() => saveCredentials({ access_token: "new" }, undefined)).not.toThrow();
+
+    expect(loadCredentials()).toEqual({ tokens: original, clientInfo: { client_id: "cid" } });
+    expect(fs.readdirSync(gleanDir)).toEqual(["mcp-credentials.json"]);
+    expect(log).toHaveBeenCalledWith("[auth] Failed to persist credentials: rename blocked");
   });
 
   it("returns undefined for corrupted JSON", () => {
@@ -88,4 +125,5 @@ describe("token-store", () => {
     expect(fs.existsSync(credFile)).toBe(false);
     expect(() => clearCredentials()).not.toThrow();
   });
+
 });
