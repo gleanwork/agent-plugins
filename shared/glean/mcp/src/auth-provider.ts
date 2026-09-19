@@ -17,6 +17,8 @@ export type InvalidationScope =
   | "verifier"
   | "discovery";
 
+const OAUTH_CLIENT_NAME = "Glean Enterprise Plugin";
+
 /**
  * Open `url` in the user's default browser. Used for the self-open sign-in
  * path when the client does not support URL-mode elicitation (where the client
@@ -79,7 +81,7 @@ export class GleanOAuthClientProvider implements OAuthClientProvider {
   get clientMetadata(): OAuthClientMetadata {
     return {
       redirect_uris: [getCallbackUrl()],
-      client_name: "Glean Claude Code Plugin",
+      client_name: OAUTH_CLIENT_NAME,
     };
   }
 

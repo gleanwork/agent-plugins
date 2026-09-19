@@ -116,7 +116,7 @@ describe("GleanOAuthClientProvider", () => {
   it("clientMetadata includes redirect URI and client name", () => {
     const provider = new GleanOAuthClientProvider();
     const meta = provider.clientMetadata;
-    expect(meta.client_name).toBe("Glean Claude Code Plugin");
+    expect(meta.client_name).toBe("Glean Enterprise Plugin");
     expect(meta.redirect_uris).toHaveLength(1);
     expect(meta.redirect_uris![0]).toMatch(/127\.0\.0\.1/);
   });
