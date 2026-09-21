@@ -5,6 +5,7 @@ import type {
 import fs from "node:fs";
 import path from "node:path";
 import { serverDataDir } from "./data-dir.js";
+import { writeFileAtomicSync } from "./atomic-write.js";
 
 const CREDENTIALS_FILENAME = "mcp-credentials.json";
 const DIR_MODE = 0o700;
@@ -38,11 +39,7 @@ export function saveCredentials(
     fs.mkdirSync(dir, { recursive: true, mode: DIR_MODE });
     fs.chmodSync(dir, DIR_MODE);
     const data: StoredCredentials = { tokens, clientInfo };
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), {
-      encoding: "utf-8",
-      mode: FILE_MODE,
-    });
-    fs.chmodSync(filePath, FILE_MODE);
+    writeFileAtomicSync(filePath, JSON.stringify(data, null, 2), FILE_MODE);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[auth] Failed to persist credentials: ${msg}`);

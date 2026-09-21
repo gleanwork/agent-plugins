@@ -2,6 +2,8 @@ import {
   Client,
   StreamableHTTPClientTransport,
   UnauthorizedError,
+  OAuthError,
+  OAuthErrorCode,
   type ElicitRequest,
   type ElicitResult,
 } from "@modelcontextprotocol/client";
@@ -177,6 +179,7 @@ export async function createRemoteClient(
   serverUrl: string,
   opts: RemoteClientOptions,
   chatSessionId?: string,
+  authRetry = false,
 ): Promise<Client> {
   const authProvider = opts.authProvider;
 
@@ -245,19 +248,63 @@ export async function createRemoteClient(
     });
   }
 
+  // Snapshot to detect a sibling's refresh between connect and failure.
+  const accessTokenAtConnect = authProvider?.tokens()?.access_token;
+
   const transport = buildTransport(serverUrl, opts, chatSessionId);
 
   try {
     await withConnectLock(() => client.connect(transport));
   } catch (error) {
-    if (error instanceof UnauthorizedError && authProvider?.authorizationUrl) {
-      pendingTransport = transport;
-      throw new AuthRequiredError(authProvider.authorizationUrl);
+    if (!authProvider) {
+      throw error;
+    }
+
+    if (error instanceof UnauthorizedError) {
+      const refreshedAccessToken = authProvider.tokens()?.access_token;
+      if (
+        !authRetry &&
+        refreshedAccessToken &&
+        refreshedAccessToken !== accessTokenAtConnect
+      ) {
+        console.error(
+          "[auth] Auth failed but a newer token is on disk " +
+            "(sibling refresh) — retrying once",
+        );
+        return createRemoteClient(serverUrl, opts, chatSessionId, true);
+      }
+      if (authProvider.authorizationUrl) {
+        pendingTransport = transport;
+        throw new AuthRequiredError(authProvider.authorizationUrl);
+      }
+    }
+    // Concurrent-refresh losers are reported with structured OAuth errors
+    // (typically invalid_request); retry once if a sibling's grant lands in the
+    // grace window.
+    if (
+      !authRetry &&
+      isRefreshOAuthError(error) &&
+      (await authProvider.waitForSiblingRefresh(accessTokenAtConnect))
+    ) {
+      console.error(
+        "[auth] Refresh failed but a sibling refreshed — retrying with its token",
+      );
+      return createRemoteClient(serverUrl, opts, chatSessionId, true);
     }
     throw error;
   }
 
   return client;
+}
+
+// Restrict recovery to OAuth errors that can indicate a refresh race. The SDK
+// preserves the response's machine-readable error code.
+function isRefreshOAuthError(error: unknown): boolean {
+  return (
+    error instanceof OAuthError &&
+    (error.code === OAuthErrorCode.InvalidRequest ||
+      error.code === OAuthErrorCode.InvalidGrant)
+  );
 }
 
 export async function callRemoteTool(
