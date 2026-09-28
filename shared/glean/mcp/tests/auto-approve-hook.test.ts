@@ -1,114 +1,175 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { execFileSync } from "node:child_process";
-import fs from "node:fs";
+import { describe, it, expect } from "vitest";
+import { spawn } from "node:child_process";
+import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
-import { PERMISSION_CONTEXT_ARG as KEY, createBypassReceipt, consumeBypassReceipt } from "../approval-context.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const HOOK = path.resolve(here, "../../../../overrides/claude/glean/hooks/auto-approve-run-tool.mjs");
-const glean = (tool: string) => `mcp__plugin_local-mcp_glean_plugin__${tool}`;
-const args = { server_id: "server", tool_name: "send_message", arguments: { body: "private body" } };
-let root: string, dataDir: string;
-function configure(hitl = "true", server = "glean_plugin", extra = {}) {
-  fs.writeFileSync(path.join(root, ".mcp.json"), JSON.stringify({
-    mcpServers: { [server]: { command: "node", env: { ENABLE_HITL: hitl }, ...extra } },
-  }));
-}
-beforeEach(() => {
-  root = fs.mkdtempSync(path.join(os.tmpdir(), "approve-hook-"));
-  dataDir = path.join(root, "plugin-data");
-  fs.mkdirSync(path.join(root, ".claude-plugin"));
-  fs.writeFileSync(path.join(root, ".claude-plugin/plugin.json"), JSON.stringify({ name: "local-mcp" }));
-  fs.mkdirSync(path.join(root, "mcp"));
-  fs.copyFileSync(path.resolve(here, "../approval-context.mjs"), path.join(root, "mcp/approval-context.mjs"));
-  configure();
-});
-afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
-function runHook(tool = glean("run_tool"), extra: Record<string, unknown> = {}, raw?: string) {
-  const env: NodeJS.ProcessEnv = { ...process.env, CLAUDE_PLUGIN_ROOT: root, CLAUDE_PLUGIN_DATA: dataDir };
-  delete env.CLAUDE_CODE_SESSION_ID;
-  const out = execFileSync(process.execPath, [HOOK], {
-    env, encoding: "utf8", input: raw ?? JSON.stringify({ tool_name: tool, tool_input: args, ...extra }),
-  });
-  return out ? JSON.parse(out).hookSpecificOutput : null;
-}
-const bypass = { permission_mode: "bypassPermissions" };
+const HOOK = path.resolve(
+  here,
+  "../../../../overrides/claude/glean/hooks/auto-approve-run-tool.mjs",
+);
 
-describe("request-local approval hook", () => {
-  it("creates a usable receipt without any host session id", () => {
-    const result = runHook(glean("run_tool"), bypass);
-    expect(result.permissionDecision).toBe("allow");
-    expect(result.hookEventName).toBe("PreToolUse");
-    expect(consumeBypassReceipt(dataDir, result.updatedInput[KEY], "run_tool", args)).toBe(true);
-    expect(fs.readdirSync(dataDir)).toEqual(["glean-bypass-receipts"]);
-  });
-  it.each([undefined, null, "", "default", "acceptEdits", "plan", "dontAsk", "bypasspermissions", {}, true])(
-    "sanitizes forged context for absent, normal, or invalid mode %j", (permission_mode) => {
-      const result = runHook(glean("run_tool"), { permission_mode, tool_input: { ...args, [KEY]: "forged" } });
-      expect(result.updatedInput).toEqual({ ...args, [KEY]: "" });
-      expect(result.permissionDecision).toBe("allow");
-      expect(fs.existsSync(dataDir)).toBe(false);
-    },
+interface HookResult {
+  out: string;
+  // Parsed contents of the single permission-mode marker the hook wrote, or
+  // null when none was written. markerFiles lists the filenames present.
+  marker: { permission_mode?: string; ts?: number } | null;
+  markerFiles: string[];
+}
+
+async function runHook(
+  toolName: string,
+  env: Record<string, string>,
+  extraInput: Record<string, unknown> = {},
+  seed?: { sessionId: string; mode: string },
+): Promise<HookResult> {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "approve-hook-"));
+  await fs.writeFile(
+    path.join(root, ".mcp.json"),
+    JSON.stringify({ mcpServers: { "glean_plugin": { env } } }),
   );
-  it.each(["resumed-session", "other-session"])("sanitizes a valid token in normal %s", (session_id) => {
-    const token = createBypassReceipt(dataDir, "run_tool", args);
-    const result = runHook(glean("run_tool"), {
-      permission_mode: "default", session_id, tool_input: { ...args, [KEY]: token },
+  // Isolate the marker under a throwaway CLAUDE_PLUGIN_DATA so the hook never
+  // touches the developer's real ~/.glean during tests.
+  const dataDir = path.join(root, "plugin-data");
+  // Optionally pre-seed a leftover marker (e.g. from a prior
+  // --dangerously-skip-permissions session) to prove the hook overwrites it.
+  if (seed) {
+    const dir = path.join(dataDir, "glean-hitl-mode");
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(
+      path.join(dir, `${seed.sessionId}.json`),
+      JSON.stringify({ permission_mode: seed.mode, ts: 0 }),
+    );
+  }
+  try {
+    const out = await new Promise<string>((resolve, reject) => {
+      const child = spawn("node", [HOOK], {
+        env: {
+          ...process.env,
+          CLAUDE_PLUGIN_ROOT: root,
+          CLAUDE_PLUGIN_DATA: dataDir,
+        },
+      });
+      let o = "";
+      child.stdout.on("data", (d) => (o += d.toString()));
+      child.on("error", reject);
+      child.on("close", () => resolve(o));
+      child.stdin.write(JSON.stringify({ tool_name: toolName, ...extraInput }));
+      child.stdin.end();
     });
-    expect(result.updatedInput[KEY]).toBe("");
-    expect(consumeBypassReceipt(dataDir, result.updatedInput[KEY], "run_tool", args)).toBe(false);
+
+    let markerFiles: string[] = [];
+    let marker: HookResult["marker"] = null;
+    try {
+      const dir = path.join(dataDir, "glean-hitl-mode");
+      markerFiles = await fs.readdir(dir);
+      if (markerFiles.length) {
+        marker = JSON.parse(
+          await fs.readFile(path.join(dir, markerFiles[0]), "utf-8"),
+        );
+      }
+    } catch {
+      // No marker directory: nothing was written.
+    }
+    return { out, marker, markerFiles };
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+}
+
+const glean = (tool: string) => `mcp__plugin_local-mcp_glean_plugin__${tool}`;
+const hitlOn = { ENABLE_HITL: "true" };
+const hitlOff = { ENABLE_HITL: "false" };
+const bypass = { permission_mode: "bypassPermissions", session_id: "sess-1" };
+
+describe("auto-approve-run-tool hook (Claude Code PreToolUse)", () => {
+  it("allows glean run_tool when HITL is on", async () => {
+    const { out } = await runHook(glean("run_tool"), hitlOn);
+    expect(JSON.parse(out).hookSpecificOutput.permissionDecision).toBe("allow");
   });
-  it("replaces supplied context even in bypass mode", () => {
-    const token = createBypassReceipt(dataDir, "run_tool", args);
-    const result = runHook(glean("run_tool"), { ...bypass, tool_input: { ...args, [KEY]: token } });
-    expect(result.updatedInput[KEY]).not.toBe(token);
-    expect(consumeBypassReceipt(dataDir, result.updatedInput[KEY], "run_tool", args)).toBe(true);
+
+  it("never allows when HITL is off (safety)", async () => {
+    const { out } = await runHook(glean("run_tool"), hitlOff);
+    expect(out.trim()).toBe("");
   });
-  it.each(["find_skills_and_tools", "read_document"])("hands off bypass for %s without native approval", (tool) => {
-    const result = runHook(glean(tool), bypass);
-    expect(result.permissionDecision).toBeUndefined();
-    expect(consumeBypassReceipt(dataDir, result.updatedInput[KEY], tool, args)).toBe(true);
+
+  it("ignores a non-glean run_tool (scoped to this plugin)", async () => {
+    const { out } = await runHook("mcp__other-server__run_tool", hitlOn);
+    expect(out.trim()).toBe("");
   });
-  it.each(["run_tool", "find_skills_and_tools"])("neither approves nor writes a receipt for HITL-off %s", (tool) => {
-    configure("false");
-    const result = runHook(glean(tool), { ...bypass, tool_input: { ...args, [KEY]: "forged" } });
-    expect(result.updatedInput[KEY]).toBe("");
-    expect(result.permissionDecision).toBeUndefined();
-    expect(fs.existsSync(dataDir)).toBe(false);
+
+  it("ignores glean tools other than run_tool (e.g. find_skills_and_tools)", async () => {
+    const { out } = await runHook(glean("find_skills_and_tools"), hitlOn);
+    expect(out.trim()).toBe("");
   });
-  it.each(["mcp__glean_default__run_tool", "mcp__plugin_other_glean_plugin__run_tool",
-    "mcp__plugin_local-mcp_glean_plugin_other__run_tool", "mcp__other-server__run_tool"])(
-    "ignores unrelated server %s", (tool) => {
-      expect(runHook(tool, bypass)).toBeNull();
-      expect(fs.existsSync(dataDir)).toBe(false);
-    },
-  );
-  it("derives both namespace components from trusted configuration", () => {
-    fs.writeFileSync(path.join(root, ".claude-plugin/plugin.json"), '{"name":"renamed-plugin"}');
-    configure("true", "local-server");
-    expect(runHook("mcp__plugin_renamed-plugin_local-server__run_tool").permissionDecision).toBe("allow");
-    expect(runHook()).toBeNull();
+});
+
+describe("auto-approve-run-tool hook (permission-mode marker)", () => {
+  it("records the permission_mode marker for run_tool when HITL is on", async () => {
+    const { marker, markerFiles } = await runHook(
+      glean("run_tool"),
+      hitlOn,
+      bypass,
+    );
+    expect(marker).toMatchObject({ permission_mode: "bypassPermissions" });
+    expect(typeof marker?.ts).toBe("number");
+    expect(markerFiles).toContain("sess-1.json");
   });
-  it("does not approve a remote server configured in the plugin", () => {
-    configure("true", "glean_plugin", { type: "http", url: "https://example.test/mcp" });
-    expect(runHook()).toBeNull();
+
+  it("keys the marker file by session id (parallel sessions don't collide)", async () => {
+    const { markerFiles } = await runHook(glean("run_tool"), hitlOn, {
+      permission_mode: "default",
+      session_id: "other-session",
+    });
+    expect(markerFiles).toEqual(["other-session.json"]);
   });
-  it("requires the plugin manifest", () => {
-    fs.unlinkSync(path.join(root, ".claude-plugin/plugin.json"));
-    expect(runHook(glean("run_tool"), bypass)).toBeNull();
+
+  it("does not write a marker when HITL is off", async () => {
+    const { out, marker } = await runHook(glean("run_tool"), hitlOff, bypass);
+    expect(out.trim()).toBe("");
+    expect(marker).toBeNull();
   });
-  it.each(["unwritable", "missing-helper"])("fails toward the gate when %s", (failure) => {
-    if (failure === "unwritable") fs.writeFileSync(dataDir, "blocked");
-    else fs.unlinkSync(path.join(root, "mcp/approval-context.mjs"));
-    expect(runHook(glean("run_tool"), bypass).updatedInput[KEY]).toBe("");
+
+  it("does not write a marker for a non-glean run_tool", async () => {
+    const { marker } = await runHook(
+      "mcp__other-server__run_tool",
+      hitlOn,
+      bypass,
+    );
+    expect(marker).toBeNull();
   });
-  it("ignores malformed JSON", () => expect(runHook(undefined, {}, "{")).toBeNull());
-  it("matches all plugin tools but not non-plugin tools", () => {
-    const config = JSON.parse(fs.readFileSync(path.join(path.dirname(HOOK), "hooks.json"), "utf8"));
-    const matcher = new RegExp(config.hooks.PreToolUse[0].matcher);
-    expect(matcher.test(glean("find_skills_and_tools"))).toBe(true);
-    expect(matcher.test("mcp__glean_default__run_tool")).toBe(false);
+
+  it("writes no marker when permission_mode is absent from the payload", async () => {
+    const { out, marker } = await runHook(glean("run_tool"), hitlOn, {
+      session_id: "sess-1",
+    });
+    // Still auto-approves, just has no mode to record.
+    expect(JSON.parse(out).hookSpecificOutput.permissionDecision).toBe("allow");
+    expect(marker).toBeNull();
+  });
+
+  it("sanitizes the session id used for the marker filename", async () => {
+    const { markerFiles } = await runHook(glean("run_tool"), hitlOn, {
+      permission_mode: "default",
+      session_id: "weird/../id with spaces",
+    });
+    expect(markerFiles).toHaveLength(1);
+    expect(markerFiles[0]).toMatch(/^[a-zA-Z0-9_-]+\.json$/);
+  });
+
+  it("overwrites a leftover bypass marker when the session is resumed without the flag", async () => {
+    // Session was first launched with --dangerously-skip-permissions (leftover
+    // marker = bypassPermissions), then resumed WITHOUT the flag (current mode
+    // = default). The hook rewrites the same per-session marker, clearing the
+    // stale bypass so the server re-engages its gate on this call.
+    const { marker } = await runHook(
+      glean("run_tool"),
+      hitlOn,
+      { permission_mode: "default", session_id: "sess-1" },
+      { sessionId: "sess-1", mode: "bypassPermissions" },
+    );
+    expect(marker).toMatchObject({ permission_mode: "default" });
   });
 });

@@ -20,7 +20,7 @@ import {
   closeCallbackServer,
 } from "./auth-callback-server.js";
 import { handleFindSkills } from "./tools/find-skills.js";
-import { handleRunTool, runToolAnnotations } from "./tools/run-tool.js";
+import { handleRunTool, runToolAnnotations, shouldAskForToolApproval } from "./tools/run-tool.js";
 import { evictStaleSkills } from "./skill-writer.js";
 import {
   loadServerUrl,
@@ -40,13 +40,7 @@ import {
   type DispatchContext,
 } from "./tools/remote-passthrough.js";
 import { resolveSessionId } from "./session-id.js";
-import { hostSharedDataDir, serverDataDir } from "./data-dir.js";
-import { cleanupBypassReceipts } from "../approval-context.mjs";
-import {
-  remoteElicitationOptions,
-  resolveToolApprovalContext,
-  withPermissionContext,
-} from "./write-approval.js";
+import { serverDataDir } from "./data-dir.js";
 import { resolveServerUrlFromEmail } from "./config-search.js";
 import { pluginVersionString } from "./version.js";
 import {
@@ -180,12 +174,24 @@ function getOAuthProvider(): GleanOAuthClientProvider {
   return oauthProvider;
 }
 
-function getRemoteClientOpts(
-  approvalEnabled = process.env.ENABLE_HITL === "true",
-): RemoteClientOptions {
+async function getRemoteClientOpts(): Promise<RemoteClientOptions> {
+  const supportsElicitation =
+    !!server.getClientCapabilities()?.elicitation &&
+    (await shouldAskForToolApproval());
   return {
     authProvider: getOAuthProvider(),
-    ...remoteElicitationOptions(server, approvalEnabled),
+    ...(supportsElicitation
+      ? {
+          elicitInput: (params, options) =>
+            server.elicitInput(
+              {
+                message: params.message,
+                requestedSchema: params.requestedSchema,
+              },
+              options,
+            ),
+        }
+      : {}),
   };
 }
 
@@ -347,7 +353,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       features: decision.features,
       state,
     });
-    return { tools: tools.map(withPermissionContext) };
+    return { tools };
   };
 
   // Pre-auth gate: tokens() is sync. When unauthenticated (or unconfigured)
@@ -369,7 +375,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   try {
     remoteClient = await createRemoteClient(
       serverUrl,
-      getRemoteClientOpts(),
+      await getRemoteClientOpts(),
       `tools-list-${process.pid}`,
     );
   } catch (err) {
@@ -441,7 +447,6 @@ function backendErrorResult(label: string, err: unknown): CallToolResult {
 // reports, so DCR + the authorize request use it directly.
 async function connectWithSignIn(
   serverUrl: string,
-  approvalEnabled: boolean,
 ): Promise<
   { ok: true; client: RemoteClient } | { ok: false; result: CallToolResult }
 > {
@@ -452,7 +457,7 @@ async function connectWithSignIn(
     try {
       const client = await createRemoteClient(
         serverUrl,
-        getRemoteClientOpts(approvalEnabled),
+        await getRemoteClientOpts(),
         `setup-${process.pid}`,
       );
       return { ok: true, client };
@@ -489,7 +494,7 @@ async function connectWithSignIn(
     try {
       const client = await createRemoteClient(
         serverUrl,
-        getRemoteClientOpts(approvalEnabled),
+        await getRemoteClientOpts(),
         `setup-${process.pid}`,
       );
       // Unexpectedly connected without needing auth — done.
@@ -531,7 +536,7 @@ async function connectWithSignIn(
     try {
       const client = await createRemoteClient(
         serverUrl,
-        getRemoteClientOpts(approvalEnabled),
+        await getRemoteClientOpts(),
         `setup-${process.pid}`,
       );
       return { ok: true, client };
@@ -551,13 +556,13 @@ async function connectWithSignIn(
  * dynamic tools fetched ✓) or blocked on a user action. Used both by
  * `setup()` with no args and as the tail of `setup({server_url})`.
  */
-async function advanceSetup(approvalEnabled: boolean): Promise<CallToolResult> {
+async function advanceSetup(): Promise<CallToolResult> {
   const serverUrl = resolveServerUrl();
   if (!serverUrl) {
     return { content: [{ type: "text", text: SETUP_REQUIRED_TEXT }] };
   }
 
-  const conn = await connectWithSignIn(serverUrl, approvalEnabled);
+  const conn = await connectWithSignIn(serverUrl);
   if (!conn.ok) return conn.result;
   const remoteClient = conn.client;
 
@@ -604,8 +609,7 @@ async function advanceSetup(approvalEnabled: boolean): Promise<CallToolResult> {
 }
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: input = {} } = request.params;
-  const { args, approvalEnabled } = resolveToolApprovalContext(name, input);
+  const { name, arguments: args = {} } = request.params;
 
   // Advertisement is advisory: a host may retain a stale tool list, so every
   // policy withdrawal is also enforced at call time. Setup remains the
@@ -648,7 +652,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
     const dispatchCtx: DispatchContext = {
       serverUrl,
-      remoteClientOpts: getRemoteClientOpts(approvalEnabled),
+      remoteClientOpts: await getRemoteClientOpts(),
       authRedirectText: AUTH_REDIRECT_TO_SETUP_TEXT,
       logLine,
     };
@@ -682,7 +686,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       try {
         remoteClient = await createRemoteClient(
           serverUrl,
-          getRemoteClientOpts(approvalEnabled),
+          await getRemoteClientOpts(),
           sessionId,
         );
       } catch (err) {
@@ -744,10 +748,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       let remoteClient;
       try {
-        // run_tool gates locally; upstream must not add a second approval form.
         remoteClient = await createRemoteClient(
           serverUrl,
-          getRemoteClientOpts(false),
+          await getRemoteClientOpts(),
           sessionId,
         );
       } catch (err) {
@@ -772,7 +775,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const skillsBaseDir = resolveSkillsBaseDir();
         return await handleRunTool(remoteClient, server, skillsBaseDir, args, {
           fileArgs: decision.features.fileArgs,
-          approvalEnabled,
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -885,7 +887,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // to drive auth + tool fetch in the same call.
       }
 
-      return await advanceSetup(approvalEnabled);
+      return await advanceSetup();
     }
 
     default:
@@ -897,7 +899,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 async function main() {
-  cleanupBypassReceipts(hostSharedDataDir());
   // Run once per session at MCP server startup.
   const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
   try {
