@@ -20,7 +20,7 @@ import {
   closeCallbackServer,
 } from "./auth-callback-server.js";
 import { handleFindSkills } from "./tools/find-skills.js";
-import { handleRunTool, runToolAnnotations } from "./tools/run-tool.js";
+import { handleRunTool, runToolAnnotations, shouldAskForToolApproval } from "./tools/run-tool.js";
 import { evictStaleSkills } from "./skill-writer.js";
 import {
   loadServerUrl,
@@ -174,8 +174,10 @@ function getOAuthProvider(): GleanOAuthClientProvider {
   return oauthProvider;
 }
 
-function getRemoteClientOpts(): RemoteClientOptions {
-  const supportsElicitation = !!server.getClientCapabilities()?.elicitation;
+async function getRemoteClientOpts(): Promise<RemoteClientOptions> {
+  const supportsElicitation =
+    !!server.getClientCapabilities()?.elicitation &&
+    (await shouldAskForToolApproval());
   return {
     authProvider: getOAuthProvider(),
     ...(supportsElicitation
@@ -373,7 +375,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   try {
     remoteClient = await createRemoteClient(
       serverUrl,
-      getRemoteClientOpts(),
+      await getRemoteClientOpts(),
       `tools-list-${process.pid}`,
     );
   } catch (err) {
@@ -455,7 +457,7 @@ async function connectWithSignIn(
     try {
       const client = await createRemoteClient(
         serverUrl,
-        getRemoteClientOpts(),
+        await getRemoteClientOpts(),
         `setup-${process.pid}`,
       );
       return { ok: true, client };
@@ -492,7 +494,7 @@ async function connectWithSignIn(
     try {
       const client = await createRemoteClient(
         serverUrl,
-        getRemoteClientOpts(),
+        await getRemoteClientOpts(),
         `setup-${process.pid}`,
       );
       // Unexpectedly connected without needing auth — done.
@@ -534,7 +536,7 @@ async function connectWithSignIn(
     try {
       const client = await createRemoteClient(
         serverUrl,
-        getRemoteClientOpts(),
+        await getRemoteClientOpts(),
         `setup-${process.pid}`,
       );
       return { ok: true, client };
@@ -650,7 +652,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
     const dispatchCtx: DispatchContext = {
       serverUrl,
-      remoteClientOpts: getRemoteClientOpts(),
+      remoteClientOpts: await getRemoteClientOpts(),
       authRedirectText: AUTH_REDIRECT_TO_SETUP_TEXT,
       logLine,
     };
@@ -684,7 +686,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       try {
         remoteClient = await createRemoteClient(
           serverUrl,
-          getRemoteClientOpts(),
+          await getRemoteClientOpts(),
           sessionId,
         );
       } catch (err) {
@@ -748,7 +750,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       try {
         remoteClient = await createRemoteClient(
           serverUrl,
-          getRemoteClientOpts(),
+          await getRemoteClientOpts(),
           sessionId,
         );
       } catch (err) {

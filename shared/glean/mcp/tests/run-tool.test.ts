@@ -7,6 +7,7 @@ import {
   buildRemoteArgs,
   FileArgsError,
   getToolApproval,
+  shouldAskForToolApproval,
   handleRunTool,
   runToolAnnotations,
   elicitationFailureText,
@@ -378,6 +379,28 @@ describe("handleRunTool (HITL)", () => {
   afterEach(async () => {
     await fs.rm(tmpDir, { recursive: true, force: true });
     vi.unstubAllEnvs();
+  });
+
+  it.each([
+    { hitl: "false", mode: "default", expected: false },
+    { hitl: "false", mode: "bypassPermissions", expected: false },
+    { hitl: undefined, mode: "default", expected: false },
+    { hitl: "true", mode: "bypassPermissions", expected: false },
+    { hitl: "true", mode: "default", expected: true },
+    { hitl: "true", mode: undefined, expected: true },
+  ])("approval guard: HITL=$hitl, mode=$mode", async ({ hitl, mode, expected }) => {
+    vi.stubEnv("ENABLE_HITL", hitl);
+    vi.stubEnv("CLAUDE_PLUGIN_DATA", tmpDir);
+    vi.stubEnv("GLEAN_SESSION_ID", "guard-session");
+    if (mode) await writeModeMarker(tmpDir, "guard-session", mode);
+    await expect(shouldAskForToolApproval()).resolves.toBe(expected);
+    if (!expected) {
+      const remote = makeRemote();
+      const server = makeServer({ elicitation: true });
+      await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+      expect(server.elicitInput).not.toHaveBeenCalled();
+      expect(remote.callTool.mock.calls.map(([request]) => request.name)).toEqual(["run_tool"]);
+    }
   });
 
   it("does not elicit when the client lacks elicitation capability", async () => {

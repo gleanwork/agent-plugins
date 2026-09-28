@@ -322,6 +322,11 @@ async function currentPermissionMode(): Promise<string | null> {
   }
 }
 
+export async function shouldAskForToolApproval(): Promise<boolean> {
+  return process.env.ENABLE_HITL === "true" &&
+    (await currentPermissionMode()) !== "bypassPermissions";
+}
+
 function humanizeMs(ms: number): string {
   const seconds = Math.round(ms / 1000);
   if (seconds < 120) return `${seconds}s`;
@@ -482,9 +487,11 @@ export async function handleRunTool(
   }
 
   const remoteArgs = buildRemoteArgs(serverId, toolName, resolvedArgs);
-  // Read-only tools are exempt from Glean's configurable approval requirements,
-  // so they do not need an approval lookup.
-  if (isKnownReadOnlyTool(toolMetadata, serverId, toolName)) {
+  // Opt-outs skip the entire approval flow, without reading or saving preferences.
+  if (
+    !(await shouldAskForToolApproval()) ||
+    isKnownReadOnlyTool(toolMetadata, serverId, toolName)
+  ) {
     return callRemoteTool(remoteClient, "run_tool", remoteArgs);
   }
 
