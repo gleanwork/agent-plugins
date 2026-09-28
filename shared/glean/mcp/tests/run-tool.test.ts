@@ -332,8 +332,7 @@ async function writeToolJson(
   );
 }
 
-// Mirrors the marker the PreToolUse hook writes: <dataDir>/glean-hitl-mode/
-// <sessionId>.json. The server reads it via CLAUDE_PLUGIN_DATA + GLEAN_SESSION_ID.
+// Legacy session markers must no longer grant bypass to a current request.
 async function writeModeMarker(
   dataDir: string,
   sessionId: string,
@@ -1422,20 +1421,21 @@ describe("handleRunTool (HITL)", () => {
     ]);
   });
 
-  it("skips the elicitation gate and executes directly in bypassPermissions mode", async () => {
+  it("skips approval lookup and persistence for a request-local bypass", async () => {
     vi.stubEnv("ENABLE_HITL", "true");
-    vi.stubEnv("CLAUDE_PLUGIN_DATA", tmpDir);
-    vi.stubEnv("GLEAN_SESSION_ID", "sess-bypass");
     await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
-    await writeModeMarker(tmpDir, "sess-bypass", "bypassPermissions");
     const remote = makeRemote();
-    const elicit = vi.fn().mockResolvedValue({ action: "accept" });
+    const elicit = vi.fn().mockResolvedValue(approvalResult("Always Allow"));
     const server = makeServer({ elicitation: true, elicit });
 
-    await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+    await handleRunTool(remote, server, tmpDir, baseArgs, {
+      ...ALL_ON,
+      approvalEnabled: false,
+    });
 
     expect(elicit).not.toHaveBeenCalled();
     expect(remote.downstreamCall).toHaveBeenCalledTimes(1);
+    expect(remote.callTool.mock.calls.map((call: any) => call[0].name)).toEqual(["run_tool"]);
   });
 
   it("still elicits when the session's permission mode is not bypass", async () => {
@@ -1469,13 +1469,13 @@ describe("handleRunTool (HITL)", () => {
     expect(elicit).toHaveBeenCalledTimes(1);
   });
 
-  it("ignores a bypass marker written for a different session (no cross-session leak)", async () => {
+  it("ignores legacy bypass markers, even for the same session", async () => {
     vi.stubEnv("ENABLE_HITL", "true");
     vi.stubEnv("CLAUDE_PLUGIN_DATA", tmpDir);
     vi.stubEnv("GLEAN_SESSION_ID", "sess-A");
     await writeToolJson(tmpDir, "jirasearch", { requires_approval: true });
-    // Another concurrent session opted into bypass; ours did not.
-    await writeModeMarker(tmpDir, "sess-B", "bypassPermissions");
+    // Old on-disk session state must not grant approval to a new request.
+    await writeModeMarker(tmpDir, "sess-A", "bypassPermissions");
     const remote = makeRemote();
     const elicit = allowOnce();
     const server = makeServer({ elicitation: true, elicit });

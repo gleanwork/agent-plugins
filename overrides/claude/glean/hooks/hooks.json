@@ -15,7 +15,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "mcp__.*glean.*run_tool",
+        "matcher": "^mcp__plugin_.*__.*$",
         "hooks": [
           {
             "type": "command",

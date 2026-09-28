@@ -3,12 +3,9 @@ import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { EmptyResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { callRemoteTool } from "../remote-client.js";
 import { FILE_ARGS_DISABLED_TEXT } from "../policy/enforce.js";
-import { resolveSessionId } from "../session-id.js";
-import { hostSharedDataDir } from "../data-dir.js";
 
 const DEFAULT_FILE_ARG_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -287,41 +284,6 @@ function primeElicitationCancellation(mcpServer: Server): void {
   });
 }
 
-// Path to the per-session permission-mode marker the PreToolUse hook writes
-// immediately before each run_tool call (see hooks/auto-approve-run-tool.mjs).
-// The directory has to be the one the HOOK can compute, not the one this process
-// would prefer -- see hostSharedDataDir() in ../data-dir.ts.
-function permissionModeMarkerPath(): string {
-  const sessionId = resolveSessionId()
-    .replace(/[^a-zA-Z0-9_-]/g, "-")
-    .slice(0, 64);
-  return path.join(hostSharedDataDir(), "glean-hitl-mode", `${sessionId}.json`);
-}
-
-// Claude Code's live permission mode for THIS session, as captured by the hook
-// on the current call. Returns null when the marker is missing, unreadable, or
-// malformed — the caller treats null as "unknown" and keeps the approval gate,
-// so any failure fails toward prompting, never toward a silent bypass.
-//
-// Resume safety: the PreToolUse hook rewrites this marker with the CURRENT mode
-// on every run_tool call (see hooks/auto-approve-run-tool.mjs), and PreToolUse
-// always runs before the tool executes, so the value read here is the one
-// written for this exact call. A session first launched with
-// --dangerously-skip-permissions and later resumed WITHOUT it (same session id)
-// therefore has its stale bypass marker overwritten with the resumed mode on
-// the resumed session's first run_tool call, re-engaging the gate.
-async function currentPermissionMode(): Promise<string | null> {
-  try {
-    const raw = await fs.readFile(permissionModeMarkerPath(), "utf-8");
-    const parsed = JSON.parse(raw) as { permission_mode?: unknown };
-    return typeof parsed.permission_mode === "string"
-      ? parsed.permission_mode
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 function humanizeMs(ms: number): string {
   const seconds = Math.round(ms / 1000);
   if (seconds < 120) return `${seconds}s`;
@@ -357,6 +319,8 @@ export function elicitationFailureText(
 
 export interface RunToolPolicy {
   fileArgs: boolean;
+  // Resolved from trusted host context before opening the upstream connection.
+  approvalEnabled?: boolean;
 }
 
 class ToolApprovalError extends Error {
@@ -482,9 +446,9 @@ export async function handleRunTool(
   }
 
   const remoteArgs = buildRemoteArgs(serverId, toolName, resolvedArgs);
-  // Read-only tools are exempt from Glean's configurable approval requirements,
-  // so they do not need an approval lookup.
-  if (isKnownReadOnlyTool(toolMetadata, serverId, toolName)) {
+  const approvalEnabled = policy.approvalEnabled ?? (process.env.ENABLE_HITL === "true");
+  // A session opt-out is not a saved preference: skip both lookup and elicitation.
+  if (!approvalEnabled || isKnownReadOnlyTool(toolMetadata, serverId, toolName)) {
     return callRemoteTool(remoteClient, "run_tool", remoteArgs);
   }
 
@@ -498,96 +462,65 @@ export async function handleRunTool(
     );
   }
 
-  const hitlEnabled = process.env.ENABLE_HITL === "true";
-  // Cursor is deliberately not excepted: current Cursor builds can use the same
-  // local elicitation gate as other capable hosts. Older builds that drop the
-  // prompt fail closed, and the timeout response explains the upgrade path.
-  if (
-    hitlEnabled &&
-    requiresApproval &&
-    mcpServer.getClientCapabilities()?.elicitation
-  ) {
-    // In bypassPermissions mode (`claude --dangerously-skip-permissions`) the
-    // user has opted out of every approval prompt for the session, so our own
-    // elicitation gate is just a redundant popup — skip it and execute
-    // directly. The mode comes from the PreToolUse hook, which writes it keyed
-    // by session id immediately before this call, so it reflects the current
-    // call and never leaks across sessions. Any other or unknown mode keeps the
-    // gate. Only bypassPermissions is skipped (deliberately narrow).
-    const bypass = (await currentPermissionMode()) === "bypassPermissions";
-    if (!bypass) {
-      const timeout = hitlTimeoutMs();
+  // Cursor is deliberately not excepted: capable hosts share the local gate.
+  if (requiresApproval && mcpServer.getClientCapabilities()?.elicitation) {
+    const timeout = hitlTimeoutMs();
+    // Burn request id 0 so cancellation can address the approval request.
+    primeElicitationCancellation(mcpServer);
 
-      // Make a dummy empty request to burn JSON-RPC request id 0
-      primeElicitationCancellation(mcpServer);
+    const startedAt = Date.now();
+    try {
+      const result = await mcpServer.elicitInput(
+        runToolApprovalForm(toolName),
+        { timeout },
+      );
+      const decision = approvalDecision(result);
 
-      const startedAt = Date.now();
-      try {
-        const result = await mcpServer.elicitInput(
-          runToolApprovalForm(toolName),
-          { timeout },
-        );
-        const decision = approvalDecision(result);
-
-        if (decision === approvalDeny || decision === approvalCancel) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Action ${toolName} was ${decision === approvalDeny ? "declined" : "cancelled"} by the user.`,
-              },
-            ],
-          };
-        }
-        if (decision === null) {
-          return {
-            content: [
-              {
-                type: "text",
-                text:
-                  `Action ${toolName} was not approved — the approval form ` +
-                  `response was invalid. The action was NOT executed.`,
-              },
-            ],
-            isError: true,
-          };
-        }
-
-        if (decision === approvalAlwaysAllow) {
-          try {
-            await callRemoteTool(remoteClient, "set_tool_approval", {
-              server_id: serverId,
-              tool_name: toolName,
-              value: "ALWAYS_ALLOWED",
-            });
-          } catch (err) {
-            const detail = err instanceof Error ? err.message : String(err);
-            console.error(
-              `[set_tool_approval] failed to persist "${toolName}" to Glean: ${detail}`,
-            );
-          }
-        }
-      } catch (err) {
-        // Fail CLOSED. An approval gate that executes the action when the
-        // prompt times out or errors defeats its own purpose — and the SDK
-        // rejects elicitInput precisely on request timeout.
-        const detail = err instanceof Error ? err.message : String(err);
+      if (decision === approvalDeny || decision === approvalCancel) {
         return {
-          content: [
-            {
-              type: "text",
-              text: elicitationFailureText(
-                mcpServer,
-                toolName,
-                detail,
-                Date.now() - startedAt,
-                timeout,
-              ),
-            },
-          ],
+          content: [{
+            type: "text",
+            text: `Action ${toolName} was ${decision === approvalDeny ? "declined" : "cancelled"} by the user.`,
+          }],
+        };
+      }
+      if (decision === null) {
+        return {
+          content: [{
+            type: "text",
+            text: `Action ${toolName} was not approved — the approval form ` +
+              `response was invalid. The action was NOT executed.`,
+          }],
           isError: true,
         };
       }
+
+      if (decision === approvalAlwaysAllow) {
+        try {
+          await callRemoteTool(remoteClient, "set_tool_approval", {
+            server_id: serverId,
+            tool_name: toolName,
+            value: "ALWAYS_ALLOWED",
+          });
+        } catch (err) {
+          const detail = err instanceof Error ? err.message : String(err);
+          console.error(
+            `[set_tool_approval] failed to persist "${toolName}" to Glean: ${detail}`,
+          );
+        }
+      }
+    } catch (err) {
+      // A failed or timed-out approval must never execute the action.
+      const detail = err instanceof Error ? err.message : String(err);
+      return {
+        content: [{
+          type: "text",
+          text: elicitationFailureText(
+            mcpServer, toolName, detail, Date.now() - startedAt, timeout,
+          ),
+        }],
+        isError: true,
+      };
     }
   }
 
