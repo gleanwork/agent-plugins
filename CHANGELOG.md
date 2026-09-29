@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.1](https://github.com/gleanwork/agent-plugins/compare/v3.5.0...v3.5.1) (2026-09-29)
+
+### Bug Fixes
+
+* honor HITL opt-outs without persisting approvals ([9543dfa](https://github.com/gleanwork/agent-plugins/commit/9543dfad4b89baff66579d6ebcae09ee7e07f75a))
+* narrow HITL change to the shared approval guard ([cdd86ff](https://github.com/gleanwork/agent-plugins/commit/cdd86fffcd574401af552df73b8f173f4ff59305))
+
 ## [3.5.0](https://github.com/gleanwork/agent-plugins/compare/v3.4.2...v3.5.0) (2026-09-25)
 
 ### Features
