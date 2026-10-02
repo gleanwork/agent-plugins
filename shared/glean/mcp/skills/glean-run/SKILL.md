@@ -1,5 +1,5 @@
 ---
-name: glean_run
+name: glean-run
 description: Discover and run Glean skills for enterprise app tasks
 argument-hint: <task description>
 allowed-tools:
