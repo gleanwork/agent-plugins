@@ -25,6 +25,8 @@ The two overlap (a recent activity feed is the substrate for triaging priorities
 - [`../using-glean/reference/search.md`](../using-glean/reference/search.md) — for documents the user authored or was mentioned in
 - [`../using-glean/reference/meeting-lookup.md`](../using-glean/reference/meeting-lookup.md) — for meetings the user attended
 
+{{> search-tool-name}}
+
 This skill carries the *workflow* on top.
 
 ## Cross-cutting rules

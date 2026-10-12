@@ -1,0 +1,1 @@
+Glean's document search tool is named `search` on some deployments and `enterprise_search` on others. Both names are the same tool with the same parameters. Wherever these instructions say `search`, use whichever of the two names appears in your tool list.

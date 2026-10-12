@@ -64,6 +64,8 @@ Local tools (grep, glob) search only the current repo. Glean searches across all
 | Identify code owners/contributors | `code_search` + `employee_search` |
 | Read full file content | `read_document` |
 
+{{> search-tool-name}}
+
 ## Output expectations
 
 When presenting code findings:

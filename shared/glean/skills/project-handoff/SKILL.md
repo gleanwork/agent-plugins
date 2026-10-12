@@ -25,6 +25,8 @@ material directly. For the param shape and pitfalls of `search`, `chat`,
 `using-glean/reference/`. If no Glean tools are visible, ask the user to set up
 Glean by prompting the harness (for example, `Set up Glean for me`).
 
+{{> search-tool-name}}
+
 ## Core Principles
 
 - **Complete context**: include everything needed to take over
