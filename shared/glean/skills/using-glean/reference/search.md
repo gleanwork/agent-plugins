@@ -71,7 +71,7 @@ Different Glean tools accept filters in different places. This matters: putting 
 | `code_search` | Inline in query string | `code_search("auth handler owner:me updated:past_week")` |
 | `employee_search` | Inline in query string | `employee_search("reportsto:\"VP Engineering\"")` |
 | `gmail_search` | Inline in query string | `gmail_search("from:\"alice@co.com\" is:unread")` |
-| `meeting_lookup` | Structured `before` / `after` params + inline for `participants` / `topic` | `meeting_lookup(query="standup", after="2025-10-07", before="2025-10-09")` |
+| `meeting_lookup` | Structured parameters; `after` / `before` are required and inclusive | `meeting_lookup(query="standup", after="2025-10-08", before="2025-10-08")` |
 | `user_activity` | Structured `start_date` / `end_date` params | `user_activity(start_date="2025-10-01", end_date="2025-10-08")` |
 
-When in doubt: `search` is structural; everything else is inline.
+When in doubt: `search`, `meeting_lookup`, and `user_activity` are structural; everything else is inline.
