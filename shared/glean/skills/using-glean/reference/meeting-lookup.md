@@ -47,10 +47,10 @@ meeting_lookup(query="design review", after="last_week", before="last_week")
 
 ## Pitfalls
 
-- **Don't invent `calendar_ids`.** Only use `"primary"`, an ID the user typed verbatim, or (Google Calendar only) an ID that appeared verbatim in a prior `meeting_lookup` result's `attendees` / `organizer_email`. Outlook calendar IDs never appear in results, so ask the user for them. Inventing IDs will return empty.
+- **Don't invent `calendar_ids`.** Only use `"primary"`, an ID the user typed verbatim, or (Google Calendar only) an ID that appeared verbatim among a prior `meeting_lookup` result's attendee or organizer emails. Outlook calendar IDs never appear in results, so ask the user for them. Inventing IDs will return empty.
 - **`peer` and `calendar_ids` interact.** `peer` wins when both are set.
 - **`peer` needs an email.** A name returns nothing.
-- **Page only when needed.** Pass the returned cursor only if the current results aren't enough, and keep every other filter identical to the original call.
+- **Page only when needed.** If the current results aren't enough and the response returns a cursor for more results, pass it back with every other filter unchanged. If the response says results were truncated but returns no cursor, narrow the date range instead.
 
 ## Typical follow-up
 
@@ -58,7 +58,7 @@ Action items from a transcript usually need follow-on `search` (the doc they ref
 
 ## When to read transcripts
 
-`meeting_lookup` returns meeting metadata, not transcript content. To read what was said, call `read_document` with the meeting's `meetingTranscriptUrl` when the result has one, otherwise its `url`. Pass several URLs in one call (see [read-document.md](read-document.md)).
+`meeting_lookup` returns meeting metadata, not transcript content. To read what was said, call `read_document` with the meeting's transcript URL when the result has one, otherwise its `url`. Pass several URLs in one call (see [read-document.md](read-document.md)).
 
 Read transcripts when you need:
 - Specific quotes or exact statements from participants

@@ -31,7 +31,7 @@ You can combine:
 - **Time** (required): `after` and `before` are both inclusive. Use keywords (`today`, `yesterday`, `this_week`, `last_week`, `last_month`, `now`, ...) or `YYYY-MM-DD`. Don't pad dates by a day.
 - **Topic**: Put keywords in `query`
 - **People**: `participants=["name"]` for the user's own meetings; `peer="email"` for someone else's calendar
-- **Transcripts**: Call `read_document` with the meeting's `meetingTranscriptUrl` (or its `url`) when you need meeting content
+- **Transcripts**: Call `read_document` with the meeting's transcript URL (or its `url`) when you need meeting content
 
 ## Extraction Focus
 
