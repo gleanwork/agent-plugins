@@ -21,17 +21,17 @@ Not everything discussed in meetings is important. Your job is to extract signal
 
 ## Capabilities
 
-Use the **meeting_lookup** tool with natural language queries:
+Use the **meeting_lookup** tool with structured parameters:
 
 ```
-meeting_lookup "[topic] [time period]"
+meeting_lookup(query="[topic]", after="last_week", before="last_week")
 ```
 
-Glean understands natural language dates and filters. You can combine:
-- **Time**: "last week", "past 2 weeks", "yesterday", "today"
-- **Topic**: Just include keywords naturally
-- **People**: Include names naturally, or use `participants:"name"`
-- **Transcripts**: Add `extract_transcript:"true"` when you need meeting content
+You can combine:
+- **Time** (required): `after` and `before` are both inclusive. Use keywords (`today`, `yesterday`, `this_week`, `last_week`, `last_month`, `now`, ...) or `YYYY-MM-DD`. Don't pad dates by a day.
+- **Topic**: Put keywords in `query`
+- **People**: `participants=["name"]` for the user's own meetings; `peer="email"` for someone else's calendar
+- **Transcripts**: Call `read_document` with the meeting's transcript URL (or its `url`) when you need meeting content
 
 ## Extraction Focus
 
