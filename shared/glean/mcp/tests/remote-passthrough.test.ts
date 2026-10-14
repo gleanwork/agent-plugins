@@ -42,6 +42,7 @@ describe("REMOTE_TOOLS_ALLOWLIST", () => {
     expect([...REMOTE_TOOLS_ALLOWLIST].sort()).toEqual([
       "chat",
       "employee_search",
+      "meeting_lookup",
       "memory",
       "memory_schema",
       "read_document",

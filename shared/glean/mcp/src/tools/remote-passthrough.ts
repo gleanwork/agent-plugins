@@ -23,6 +23,7 @@ export const REMOTE_TOOLS_ALLOWLIST: ReadonlySet<string> = new Set([
   "memory_schema",
   "user_activity",
   "employee_search",
+  "meeting_lookup",
 ]);
 
 type ToolInputSchema = Tool["inputSchema"];
