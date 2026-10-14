@@ -23,6 +23,8 @@ Determine the search topic from the user's request or current conversation conte
 
 Use the Glean search tool with the user's query. Return the most relevant results.
 
+{{> search-tool-name}}
+
 ### 3. Assess Results
 
 For each result, evaluate:

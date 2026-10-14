@@ -13,6 +13,8 @@ Determine the project or topic from the user's request. If no project name is cl
 
 This skill drives the standard Glean MCP tools. For full param shape and pitfalls of `chat`, `search`, `employee_search`, and `meeting_lookup`, see the using-glean reference at `using-glean/reference/`.
 
+{{> search-tool-name}}
+
 ## When This Applies
 
 Use this approach when users ask:

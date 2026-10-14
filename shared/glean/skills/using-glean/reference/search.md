@@ -2,6 +2,8 @@
 
 Search documents across all the user's Glean-indexed sources (Confluence, Google Drive, GitHub, Slack, Jira, Notion, …). This is the workhorse tool for *"find the doc about X"* questions.
 
+{{> search-tool-name}}
+
 ## When to use
 
 - Documents, wikis, policies, RFCs, specs, design docs, runbooks

@@ -49,6 +49,8 @@ Filter aggressively for relevant, current information.
 | Find related/dependent systems | `code_search` |
 | Read full document content | `read_document` |
 
+{{> search-tool-name}}
+
 ## Workflow
 
 ### Phase 1: Search for Design & Architecture

@@ -16,6 +16,8 @@ When Glean MCP tools are available (tools matching `mcp__glean_*`), use the corr
 - **Full document content** → `read_document` with URL from search results
 - **Complex multi-source analysis** → `chat`
 
+{{> search-tool-name}}
+
 **Key rules:**
 - Use `search` with structured parameters (separate `owner`, `app`, `updated` arguments)
 - Use `code_search`, `employee_search`, `gmail_search` with inline query filters

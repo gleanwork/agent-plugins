@@ -11,7 +11,9 @@ The Glean MCP server exposes a family of tools that let the assistant query the 
 
 The tools listed below come from the user's Glean MCP server connection. Refer to them by their bare names (`search`, `employee_search`, `meeting_lookup`, …) — the assistant resolves them against the active tool inventory.
 
-In the raw MCP tool list, Glean tools appear as `mcp__glean_[server-name]__[tool]` where `[server-name]` is the user's configured server identifier (e.g., `default`, `production`, `acme`). The tool suffix after the final `__` is always consistent across deployments. Use whatever Glean server is visible in your tool inventory.
+{{> search-tool-name}}
+
+In the raw MCP tool list, Glean tools appear as `mcp__glean_[server-name]__[tool]` where `[server-name]` is the user's configured server identifier (e.g., `default`, `production`, `acme`). The tool suffix after the final `__` is the same across deployments, except for the search tool noted above. Use whatever Glean server is visible in your tool inventory.
 
 If no Glean tools are visible, ask the user to set up Glean by prompting the
 harness (for example, `Set up Glean for me`).
