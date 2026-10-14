@@ -26,6 +26,13 @@ export const REMOTE_TOOLS_ALLOWLIST: ReadonlySet<string> = new Set([
   "meeting_lookup",
 ]);
 
+// Remote tools listed under a different local name. Glean serves `search` as
+// `enterprise_search` on some deployments and still dispatches a `search` call
+// to it there, so the plugin keeps the one name its skills refer to.
+const REMOTE_TOOL_LOCAL_NAMES: ReadonlyMap<string, string> = new Map([
+  ["enterprise_search", "search"],
+]);
+
 type ToolInputSchema = Tool["inputSchema"];
 
 /**
@@ -68,6 +75,7 @@ export async function fetchAllowedRemoteTools(
   { hostReceivingList = false }: { hostReceivingList?: boolean } = {},
 ): Promise<Tool[]> {
   const collected: Tool[] = [];
+  const listed = new Set<string>();
   let cursor: string | undefined;
   do {
     // Negotiation metadata rides on tools/list as well as tools/call, so a session
@@ -78,9 +86,12 @@ export async function fetchAllowedRemoteTools(
     });
     recordPolicyFromResult(page, TOOLS_LIST_LABEL, { hostReceivingList });
     for (const tool of page.tools) {
-      if (!REMOTE_TOOLS_ALLOWLIST.has(tool.name)) continue;
+      const name = REMOTE_TOOL_LOCAL_NAMES.get(tool.name) ?? tool.name;
+      if (!REMOTE_TOOLS_ALLOWLIST.has(name) || listed.has(name)) continue;
+      listed.add(name);
       collected.push({
         ...tool,
+        name,
         inputSchema: augmentSchemaForLocal(tool.inputSchema),
       } as Tool);
     }

@@ -151,6 +151,38 @@ describe("fetchAllowedRemoteTools", () => {
     expect(client.calls[1].cursor).toBe("page2");
   });
 
+  it("lists enterprise_search under the local name search", async () => {
+    const client = clientWithPages([
+      {
+        tools: [
+          { name: "enterprise_search", description: "Enterprise search", inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } },
+        ],
+      },
+    ]);
+
+    const tools = await fetchAllowedRemoteTools(client);
+
+    expect(tools.map((t) => t.name)).toEqual(["search"]);
+    expect(tools[0].description).toBe("Enterprise search");
+    expect(tools[0].inputSchema.required).toEqual(["query"]);
+  });
+
+  it("lists search once when the remote serves both search names", async () => {
+    const client = clientWithPages([
+      {
+        tools: [
+          { name: "search", description: "Search", inputSchema: { type: "object" } },
+          { name: "enterprise_search", description: "Enterprise search", inputSchema: { type: "object" } },
+        ],
+      },
+    ]);
+
+    const tools = await fetchAllowedRemoteTools(client);
+
+    expect(tools.map((t) => t.name)).toEqual(["search"]);
+    expect(tools[0].description).toBe("Search");
+  });
+
   it("returns empty array when no allow-listed tools exist", async () => {
     const client = clientWithPages([
       { tools: [{ name: "irrelevant", description: "", inputSchema: { type: "object" } }] },
