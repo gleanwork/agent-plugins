@@ -220,15 +220,15 @@ export function isCursorClient(mcpServer: Server): boolean {
 }
 
 // Keep this form aligned with Scio's run_tool approval UX: one required enum,
-// with Always Allow first and selected by default.
+// with Allow (once) first and selected by default; Always Allow is opt-in.
 const approvalField = "approval";
 const approvalAlwaysAllow = "Always Allow";
 const approvalAllow = "Allow";
 const approvalDeny = "Deny";
 const approvalCancel = "cancel";
 const approvalChoices = [
-  approvalAlwaysAllow,
   approvalAllow,
+  approvalAlwaysAllow,
   approvalDeny,
 ] as const;
 type ApprovalChoice = (typeof approvalChoices)[number];
@@ -239,9 +239,8 @@ function runToolApprovalForm(toolName: string) {
     mode: "form" as const,
     message:
       `Allow running the write tool ${toolName}?\n\n` +
-      `Always Allow is selected by default. Accepting with this selection ` +
-      `saves approval for future calls to this tool. To change it, select a ` +
-      `different Approval option below.`,
+      `Allow is selected by default and approves this call only. Select ` +
+      `Always Allow to save approval for future calls to this tool.`,
     requestedSchema: {
       type: "object",
       required: [approvalField],
