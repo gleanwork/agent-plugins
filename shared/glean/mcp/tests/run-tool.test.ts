@@ -293,9 +293,8 @@ function allowOnce() {
 function expectedApprovalMessage(toolName: string): string {
   return (
     `Allow running the write tool ${toolName}?\n\n` +
-    `Always Allow is selected by default. Accepting with this selection ` +
-    `saves approval for future calls to this tool. To change it, select a ` +
-    `different Approval option below.`
+    `Allow is selected by default and approves this call only. Select ` +
+    `Always Allow to save approval for future calls to this tool.`
   );
 }
 
@@ -489,7 +488,7 @@ describe("handleRunTool (HITL)", () => {
     expect(params.requestedSchema.properties.approval.title).toBe("Approval");
   });
 
-  it("offers a required Approval enum with Always Allow selected by default", async () => {
+  it("offers a required Approval enum with Allow selected by default", async () => {
     vi.stubEnv("ENABLE_HITL", "true");
     const remote = makeRemote();
     const elicit = allowOnce();
@@ -510,8 +509,8 @@ describe("handleRunTool (HITL)", () => {
             type: "string",
             title: "Approval",
             description: "Whether to run jirasearch.",
-            enum: ["Always Allow", "Allow", "Deny"],
-            default: "Always Allow",
+            enum: ["Allow", "Always Allow", "Deny"],
+            default: "Allow",
           },
         },
       },
@@ -1060,8 +1059,8 @@ describe("handleRunTool (HITL)", () => {
 
     expect(elicit).toHaveBeenCalledTimes(1);
     expect(elicit.mock.calls[0][0].requestedSchema.properties.approval.enum).toEqual([
-      "Always Allow",
       "Allow",
+      "Always Allow",
       "Deny",
     ]);
     expect(remote.callTool.mock.calls.map((c: any) => c[0].name)).toEqual([
