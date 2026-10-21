@@ -44,6 +44,10 @@ Nothing under `shared/` ships implicitly. Each emitted plugin names its shared
 - **Codex** — a marketplace + an [Agent Plugins](https://agent-plugins.org/specification)
   package for each plugin: a root `plugin.json` with Codex's install-surface
   metadata under `extensions["com.openai"]`, `mcp.json`, and bundled skills.
+- **Agent Plugins** — the same portable packages for any client that supports
+  the format, with a marketplace for Codex (`.agents/plugins/marketplace.json`)
+  and GitHub Copilot (`.github/plugin/marketplace.json`). Copilot's custom
+  agents ship in each package's `com.github.copilot/agents/`.
 
 Skills use the open Agent Skills format — `SKILL.md` with `name`/`description`
 frontmatter and optional `references/` loaded on demand — which Claude Code,
@@ -91,4 +95,5 @@ In this repo the skill markdown _is_ the shipped product, so:
 ### Releasing
 
 See [`RELEASE.md`](./RELEASE.md) for how to cut a release and how that flows
-into the `claude-plugins`, `cursor-plugins`, and `codex-plugins` repos.
+into the `claude-plugins`, `cursor-plugins`, `codex-plugins`, and
+`glean-plugins` repos.

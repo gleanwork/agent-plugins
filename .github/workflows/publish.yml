@@ -51,6 +51,9 @@ jobs:
             repo: cursor-plugins
           - target: codex
             repo: codex-plugins
+          # Agent Plugins packages with a Codex and a Copilot marketplace.
+          - target: agent-plugins
+            repo: glean-plugins
     concurrency:
       group: pluginpack-sync-${{ matrix.target }}
       cancel-in-progress: true

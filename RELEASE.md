@@ -77,11 +77,12 @@ release is what triggers the actual plugin distribution (below).
 Publishing the GitHub Release triggers
 [`.github/workflows/publish.yml`](./.github/workflows/publish.yml), which:
 
-1. Rebuilds and validates all 3 targets (`claude`, `cursor`, `codex`).
+1. Rebuilds and validates all 4 targets (`claude`, `cursor`, `codex`,
+   `agent-plugins`).
 2. Opens — or force-updates — one PR per target in that target's output
    repo (`gleanwork/claude-plugins`, `gleanwork/cursor-plugins`,
-   `gleanwork/codex-plugins`), on a machine-owned `pluginpack/sync-<target>`
-   branch labeled `pluginpack-sync`.
+   `gleanwork/codex-plugins`, `gleanwork/glean-plugins`), on a machine-owned
+   `pluginpack/sync-<target>` branch labeled `pluginpack-sync`.
 
 Those PRs are regenerated and force-pushed on every sync — **don't push to
 them by hand or hand-edit their content**. Review and merge each one in its

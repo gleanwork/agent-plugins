@@ -19,7 +19,7 @@
     "prune": "pluginpack prune",
     "typecheck:bundle": "tsc --noEmit -p shared/glean/mcp/tsconfig.json",
     "test:bundle": "vitest run --root shared/glean/mcp",
-    "validate": "pluginpack validate --target claude --dir dist/claude && pluginpack validate --target cursor --dir dist/cursor && pluginpack validate --target codex --dir dist/codex",
+    "validate": "pluginpack validate --target claude --dir dist/claude && pluginpack validate --target cursor --dir dist/cursor && pluginpack validate --target codex --dir dist/codex && pluginpack validate --target agent-plugins --dir dist/agent-plugins",
     "test": "npm run build && npm run validate",
     "prebuild": "node scripts/sync-plugin-changelogs.mjs && npm run build:bundle",
     "release": "release-it"
