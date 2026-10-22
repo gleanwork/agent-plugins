@@ -38,6 +38,20 @@ release is what triggers the actual plugin distribution (below).
   npm install
   ```
 
+- Test the Agent Plugins output in real clients before you release. Sync
+  without a release, then install from the `glean-plugins` sync branch:
+
+  ```sh
+  gh workflow run publish.yml --repo gleanwork/agent-plugins -f mode=sync
+  npm run e2e:install -- --source gleanwork/glean-plugins --ref pluginpack/sync-agent-plugins
+  ```
+
+  `e2e:install` installs both plugins in Codex and GitHub Copilot CLI, each
+  with a throwaway home, and checks the skills, the Copilot agents and that
+  the Glean MCP server lists its tools. Run it with no options to test a
+  local `npm run build` instead. It doesn't sign in to Glean, so also check a
+  signed-in session by hand.
+
 ## Release
 
 - `release-it`'s GitHub plugin needs a token with `repo` scope to create the
