@@ -4,6 +4,55 @@ import pkg from "./package.json" with { type: "json" };
 const gleanPluginDescription =
   "Use Glean to search your company's knowledge, chat with Glean Assistant, and discover and use the skills and connected tools available to your organization.";
 
+const devDocsDescription =
+  "Search the public Glean developer documentation — APIs, SDKs, MCP, and integration guides for building with Glean.";
+
+// Codex's plugin card. The codex target moves it under
+// extensions["com.openai"] itself; the agent-plugins target needs it there
+// explicitly, because one package serves several clients.
+const gleanCodexInterface = {
+  displayName: "Glean",
+  shortDescription: "Enterprise knowledge in Codex",
+  longDescription:
+    "Search enterprise documents, Slack, email, code, and people; prepare for meetings; and synthesize trusted company knowledge in Codex.",
+  developerName: "Glean",
+  category: "Productivity",
+  capabilities: ["Read", "Search"],
+  defaultPrompt: [
+    "Search Glean for the latest project decision.",
+    "Find an expert on this codebase.",
+    "Prepare me for my next meeting.",
+  ],
+  composerIcon: "./assets/avatar.png",
+  logo: "./assets/avatar.png",
+};
+
+const devDocsCodexInterface = {
+  displayName: "Glean Developer Docs",
+  shortDescription: "Build with Glean in Codex",
+  longDescription:
+    "Search public Glean API, SDK, MCP, authentication, and integration documentation while you build in Codex.",
+  developerName: "Glean",
+  category: "Productivity",
+  capabilities: ["Read", "Search"],
+  defaultPrompt: [
+    "How do I authenticate with the Glean API?",
+    "Find the Glean Indexing API documentation.",
+    "Show me a Glean SDK example.",
+  ],
+  composerIcon: "./assets/avatar.png",
+  logo: "./assets/avatar.png",
+};
+
+// Codex marketplace entry fields pluginpack can't derive.
+const codexEntry = {
+  policy: {
+    installation: "AVAILABLE",
+    authentication: "ON_INSTALL",
+  },
+  category: "Productivity",
+};
+
 export default defineConfig({
   name: "glean-plugins",
   version: pkg.version,
@@ -115,64 +164,51 @@ export default defineConfig({
           source: "shared/glean",
           overrides: "overrides/codex/glean",
           description: gleanPluginDescription,
-          manifest: {
-            interface: {
-              displayName: "Glean",
-              shortDescription: "Enterprise knowledge in Codex",
-              longDescription:
-                "Search enterprise documents, Slack, email, code, and people; prepare for meetings; and synthesize trusted company knowledge in Codex.",
-              developerName: "Glean",
-              category: "Productivity",
-              capabilities: ["Read", "Search"],
-              defaultPrompt: [
-                "Search Glean for the latest project decision.",
-                "Find an expert on this codebase.",
-                "Prepare me for my next meeting.",
-              ],
-              composerIcon: "./assets/avatar.png",
-              logo: "./assets/avatar.png",
-            },
-          },
-          entry: {
-            policy: {
-              installation: "AVAILABLE",
-              authentication: "ON_INSTALL",
-            },
-            category: "Productivity",
-          },
+          manifest: { interface: gleanCodexInterface },
+          entry: codexEntry,
         },
         "glean-dev-docs": {
           source: "shared/glean-dev-docs",
           overrides: "overrides/codex/glean-dev-docs",
           include: ["skills", "assets", "static"],
-          description:
-            "Search the public Glean developer documentation — APIs, SDKs, MCP, and integration guides for building with Glean.",
+          description: devDocsDescription,
           manifest: {
             homepage: "https://developers.glean.com/",
-            interface: {
-              displayName: "Glean Developer Docs",
-              shortDescription: "Build with Glean in Codex",
-              longDescription:
-                "Search public Glean API, SDK, MCP, authentication, and integration documentation while you build in Codex.",
-              developerName: "Glean",
-              category: "Productivity",
-              capabilities: ["Read", "Search"],
-              defaultPrompt: [
-                "How do I authenticate with the Glean API?",
-                "Find the Glean Indexing API documentation.",
-                "Show me a Glean SDK example.",
-              ],
-              composerIcon: "./assets/avatar.png",
-              logo: "./assets/avatar.png",
-            },
+            interface: devDocsCodexInterface,
           },
-          entry: {
-            policy: {
-              installation: "AVAILABLE",
-              authentication: "ON_INSTALL",
-            },
-            category: "Productivity",
+          entry: codexEntry,
+        },
+      },
+    },
+    // One Agent Plugins package per plugin, published to gleanwork/glean-plugins
+    // with a marketplace for each listed client.
+    "agent-plugins": {
+      outDir: "dist/agent-plugins",
+      repositoryFiles: "overrides/agent-plugins/root",
+      clients: {
+        codex: { manifest: { interface: { displayName: "Glean" } } },
+        copilot: {},
+      },
+      plugins: {
+        glean: {
+          source: "shared/glean",
+          overrides: "overrides/agent-plugins/glean",
+          description: gleanPluginDescription,
+          manifest: {
+            extensions: { "com.openai": { interface: gleanCodexInterface } },
           },
+          clients: { codex: { entry: codexEntry } },
+        },
+        "glean-dev-docs": {
+          source: "shared/glean-dev-docs",
+          overrides: "overrides/agent-plugins/glean-dev-docs",
+          include: ["skills", "assets", "static"],
+          description: devDocsDescription,
+          manifest: {
+            homepage: "https://developers.glean.com/",
+            extensions: { "com.openai": { interface: devDocsCodexInterface } },
+          },
+          clients: { codex: { entry: codexEntry } },
         },
       },
     },

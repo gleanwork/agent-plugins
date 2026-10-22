@@ -16,6 +16,8 @@ const paths = [
   "dist/cursor/glean-dev-docs/CHANGELOG.md",
   "dist/codex/plugins/glean/CHANGELOG.md",
   "dist/codex/plugins/glean-dev-docs/CHANGELOG.md",
+  "dist/agent-plugins/plugins/glean/CHANGELOG.md",
+  "dist/agent-plugins/plugins/glean-dev-docs/CHANGELOG.md",
 ];
 
 const mismatches = paths.filter((relativePath) => {
