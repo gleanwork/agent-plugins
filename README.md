@@ -41,8 +41,9 @@ Nothing under `shared/` ships implicitly. Each emitted plugin names its shared
   skills, commands, and hooks.
 - **Cursor** — a marketplace + `plugin.json` referencing skills, agents, rules,
   and commands.
-- **Codex** — a marketplace + `.codex-plugin/plugin.json` for each plugin,
-  with bundled skills and install-surface metadata.
+- **Codex** — a marketplace + an [Agent Plugins](https://agent-plugins.org/specification)
+  package for each plugin: a root `plugin.json` with Codex's install-surface
+  metadata under `extensions["com.openai"]`, `mcp.json`, and bundled skills.
 
 Skills use the open Agent Skills format — `SKILL.md` with `name`/`description`
 frontmatter and optional `references/` loaded on demand — which Claude Code,
