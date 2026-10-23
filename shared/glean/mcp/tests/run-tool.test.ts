@@ -18,6 +18,11 @@ import {
 } from "../src/tools/approval-args.js";
 import type { RunToolPolicy } from "../src/tools/run-tool.js";
 import { writeSkillsToDisk } from "../src/skill-writer.js";
+import {
+  recordPolicyFromResult,
+  setPolicyServerUrl,
+} from "../src/policy/session.js";
+import { CAPABILITY_POLICY_KEY } from "../src/policy/key.js";
 
 // The decision every install resolves to today, since production returns no policy.
 // Passed explicitly at each call site rather than defaulted, so a case that means to
@@ -339,13 +344,22 @@ async function writeModeMarker(
   dataDir: string,
   sessionId: string,
   mode: string,
+  autoApproved?: boolean,
 ) {
   const dir = path.join(dataDir, "glean-hitl-mode");
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(
     path.join(dir, `${sessionId}.json`),
-    JSON.stringify({ permission_mode: mode, ts: Date.now() }),
+    JSON.stringify({ permission_mode: mode, auto_approved: autoApproved, ts: Date.now() }),
     "utf-8",
+  );
+}
+
+// Drives the session's decision the way a remote response would.
+function receiveHitlPolicy(enabled: boolean) {
+  recordPolicyFromResult(
+    { _meta: { [CAPABILITY_POLICY_KEY]: { features: { hitl: { enabled } } } } },
+    "test",
   );
 }
 
@@ -401,6 +415,35 @@ describe("handleRunTool (HITL)", () => {
       expect(server.elicitInput).not.toHaveBeenCalled();
       expect(remote.callTool.mock.calls.map(([request]) => request.name)).toEqual(["run_tool"]);
     }
+  });
+
+  describe("remote hitl policy", () => {
+    beforeEach(() => {
+      vi.stubEnv("ENABLE_HITL", "true");
+      vi.stubEnv("PLUGIN_DATA_DIR", tmpDir);
+      vi.stubEnv("CLAUDE_PLUGIN_DATA", tmpDir);
+      vi.stubEnv("GLEAN_SESSION_ID", "policy-session");
+      setPolicyServerUrl("https://example-be.glean.com/mcp/gateway/proxy");
+      receiveHitlPolicy(false);
+    });
+    afterEach(() => {
+      receiveHitlPolicy(true);
+      setPolicyServerUrl(undefined);
+    });
+
+    it("hands approval to the host when the hook left its prompt in place", async () => {
+      await writeModeMarker(tmpDir, "policy-session", "default", false);
+      await expect(shouldAskForToolApproval()).resolves.toBe(false);
+      const remote = makeRemote();
+      const server = makeServer({ elicitation: true });
+      await handleRunTool(remote, server, tmpDir, baseArgs, ALL_ON);
+      expect(server.elicitInput).not.toHaveBeenCalled();
+    });
+
+    it("keeps its own prompt when the hook auto-approved this call", async () => {
+      await writeModeMarker(tmpDir, "policy-session", "default", true);
+      await expect(shouldAskForToolApproval()).resolves.toBe(true);
+    });
   });
 
   it("does not elicit when the client lacks elicitation capability", async () => {

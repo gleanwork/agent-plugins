@@ -331,7 +331,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     const runTool: Tool = {
       ...RUN_TOOL_TOOL,
       annotations: runToolAnnotations(
-        process.env.ENABLE_HITL === "true",
+        process.env.ENABLE_HITL === "true" && decision.features.hitl,
         !!server.getClientCapabilities()?.elicitation,
       ),
     };
