@@ -58,44 +58,73 @@ try {
   // No readable config: do nothing.
 }
 
-if (env.ENABLE_HITL === "true") {
-  // Record Claude Code's live permission mode so the MCP server can skip its
-  // own elicitation gate when the user launched with
-  // --dangerously-skip-permissions (permission_mode "bypassPermissions").
-  // Written on every run_tool call and keyed by session id, so it is always
-  // fresh for the call that immediately follows and never leaks across
-  // sessions. The base dir and session-id sanitization MUST match
-  // run-tool.ts (permissionModeMarkerPath) and start.sh's PLUGIN_DATA_DIR:
-  // CLAUDE_PLUGIN_DATA when set, else ~/.glean. Best-effort — marker I/O must
-  // never break the approval decision below.
+// Remote capability policy (see shared/glean/mcp/src/policy/key.ts): an admin may hand
+// write approval to the host, in which case the native prompt must stay. Read from the
+// cache the MCP server keeps, keyed by the same server URL it resolves. Any failure
+// reads as "hitl on", the pre-policy behavior.
+const dataBase =
+  process.env.CLAUDE_PLUGIN_DATA || path.join(os.homedir(), ".glean");
+function remoteHitlEnabled() {
   try {
-    const permissionMode = String(input.permission_mode ?? "");
+    let url = env.GLEAN_MCP_SERVER_URL;
+    if (!url) {
+      url = JSON.parse(
+        fs.readFileSync(path.join(dataBase, "mcp-server-url.json"), "utf-8"),
+      ).serverUrl;
+    }
+    const cache = JSON.parse(
+      fs.readFileSync(path.join(dataBase, "policy-cache.json"), "utf-8"),
+    );
+    return cache?.[url]?.policy?.features?.hitl?.enabled !== false;
+  } catch {
+    return true;
+  }
+}
+
+if (env.ENABLE_HITL === "true") {
+  const autoApprove = remoteHitlEnabled();
+  // Record Claude Code's live permission mode, and whether we suppressed the native
+  // prompt, so the MCP server can decide its own gate: it skips its elicitation under
+  // bypassPermissions, and keeps it whenever auto_approved is true even if its own
+  // policy says hitl is off. Written on every run_tool call and keyed by session id.
+  // The base dir and session-id sanitization MUST match run-tool.ts
+  // (permissionModeMarkerPath) and start.sh's PLUGIN_DATA_DIR: CLAUDE_PLUGIN_DATA when
+  // set, else ~/.glean.
+  let markerWritten = false;
+  try {
     const sessionId = String(input.session_id ?? "")
       .replace(/[^a-zA-Z0-9_-]/g, "-")
       .slice(0, 64);
-    if (permissionMode && sessionId) {
-      const base =
-        process.env.CLAUDE_PLUGIN_DATA || path.join(os.homedir(), ".glean");
-      const dir = path.join(base, "glean-hitl-mode");
+    if (sessionId) {
+      const dir = path.join(dataBase, "glean-hitl-mode");
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(
         path.join(dir, `${sessionId}.json`),
-        JSON.stringify({ permission_mode: permissionMode, ts: Date.now() }),
+        JSON.stringify({
+          permission_mode: String(input.permission_mode ?? ""),
+          auto_approved: autoApprove,
+          ts: Date.now(),
+        }),
       );
+      markerWritten = true;
     }
   } catch {
-    // Ignore: a failed marker write just means the server keeps prompting.
+    // Falls through to the native prompt below.
   }
 
-  process.stdout.write(
-    JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: "PreToolUse",
-        permissionDecision: "allow",
-        permissionDecisionReason:
-          "Glean run_tool is gated by its own HITL elicitation prompt; suppressing the redundant native prompt while ENABLE_HITL is on.",
-      },
-    }),
-  );
+  // Only suppress the native prompt when the server can see we did. Without the marker
+  // a server whose policy says hitl is off would skip its gate too, leaving none.
+  if (autoApprove && markerWritten) {
+    process.stdout.write(
+      JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: "PreToolUse",
+          permissionDecision: "allow",
+          permissionDecisionReason:
+            "Glean run_tool is gated by its own HITL elicitation prompt; suppressing the redundant native prompt while ENABLE_HITL is on.",
+        },
+      }),
+    );
+  }
 }
 process.exit(0);

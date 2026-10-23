@@ -9,7 +9,7 @@ import {
 import { evaluate } from "../src/policy/evaluate.js";
 import type { Decision } from "../src/policy/types.js";
 
-const allSupported = { toolPromotion: true, metaTools: true, fileArgs: true };
+const allSupported = { toolPromotion: true, metaTools: true, fileArgs: true, hitl: true };
 
 // Version rules cannot be exercised through evaluate() under vitest -- the build constant
 // is absent, so versionSource is "unknown" and version policy is never enforced. The

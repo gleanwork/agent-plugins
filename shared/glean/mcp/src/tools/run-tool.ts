@@ -9,6 +9,7 @@ import { callRemoteTool } from "../remote-client.js";
 import { FILE_ARGS_DISABLED_TEXT } from "../policy/enforce.js";
 import { resolveSessionId } from "../session-id.js";
 import { hostSharedDataDir } from "../data-dir.js";
+import { decisionInForce } from "../policy/session.js";
 
 const DEFAULT_FILE_ARG_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -310,21 +311,30 @@ function permissionModeMarkerPath(): string {
 // --dangerously-skip-permissions and later resumed WITHOUT it (same session id)
 // therefore has its stale bypass marker overwritten with the resumed mode on
 // the resumed session's first run_tool call, re-engaging the gate.
-async function currentPermissionMode(): Promise<string | null> {
+async function readHookMarker(): Promise<Record<string, unknown>> {
   try {
-    const raw = await fs.readFile(permissionModeMarkerPath(), "utf-8");
-    const parsed = JSON.parse(raw) as { permission_mode?: unknown };
-    return typeof parsed.permission_mode === "string"
-      ? parsed.permission_mode
-      : null;
+    const parsed: unknown = JSON.parse(
+      await fs.readFile(permissionModeMarkerPath(), "utf-8"),
+    );
+    return isRecord(parsed) ? parsed : {};
   } catch {
-    return null;
+    return {};
   }
 }
 
+async function currentPermissionMode(): Promise<string | null> {
+  const mode = (await readHookMarker()).permission_mode;
+  return typeof mode === "string" ? mode : null;
+}
+
 export async function shouldAskForToolApproval(): Promise<boolean> {
-  return process.env.ENABLE_HITL === "true" &&
-    (await currentPermissionMode()) !== "bypassPermissions";
+  if (process.env.ENABLE_HITL !== "true") return false;
+  const marker = await readHookMarker();
+  if (marker.permission_mode === "bypassPermissions") return false;
+  // Remote policy may hand approval to the host's own prompt. But if the hook
+  // auto-approved this call (it read a policy with hitl on), the host prompt was
+  // suppressed and ours is the only gate left, so keep it.
+  return decisionInForce().features.hitl || marker.auto_approved === true;
 }
 
 function humanizeMs(ms: number): string {

@@ -11,6 +11,7 @@ const allSupported = {
   toolPromotion: true,
   metaTools: true,
   fileArgs: true,
+  hitl: true,
 };
 
 describe("feature gating", () => {
@@ -25,6 +26,7 @@ describe("feature gating", () => {
       toolPromotion: true,
       metaTools: true,
       fileArgs: false,
+      hitl: true,
     });
     expect(d.deactivated).toBe(false);
   });
@@ -305,16 +307,18 @@ describe("unknown-key reporting", () => {
     expect(v.unknownKeys).toEqual([]);
   });
 
-  // hitl is defined by the design contract but deliberately not declared by this build,
-  // because the stateless remote cannot take approval over yet. It therefore travels the
-  // same path as any feature a policy names ahead of the plugin: accepted so a newer
-  // remote is not called malformed, reported so the ignoring is greppable, and inert.
-  // If a later build declares hitl, this test is the one that should start failing.
-  it("treats hitl as an unknown feature, since this build does not declare it", () => {
+  it("accepts hitl as a known feature and lets the remote disable it", () => {
     const v = validatePolicy({ features: { hitl: { enabled: false } } });
     expect(v.ok).toBe(true);
     if (!v.ok) return;
-    expect(v.unknownKeys).toEqual(["features.hitl"]);
+    expect(v.unknownKeys).toEqual([]);
+    const d = evaluate({
+      pluginVersion: "1.0.0",
+      versionSource: "build",
+      supportedFeatures: allSupported,
+      policy: v.policy,
+    });
+    expect(d.features.hitl).toBe(false);
   });
 });
 

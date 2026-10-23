@@ -15,7 +15,7 @@ interface HookResult {
   out: string;
   // Parsed contents of the single permission-mode marker the hook wrote, or
   // null when none was written. markerFiles lists the filenames present.
-  marker: { permission_mode?: string; ts?: number } | null;
+  marker: { permission_mode?: string; auto_approved?: boolean; ts?: number } | null;
   markerFiles: string[];
 }
 
@@ -24,6 +24,7 @@ async function runHook(
   env: Record<string, string>,
   extraInput: Record<string, unknown> = {},
   seed?: { sessionId: string; mode: string },
+  policy?: unknown,
 ): Promise<HookResult> {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "approve-hook-"));
   await fs.writeFile(
@@ -41,6 +42,19 @@ async function runHook(
     await fs.writeFile(
       path.join(dir, `${seed.sessionId}.json`),
       JSON.stringify({ permission_mode: seed.mode, ts: 0 }),
+    );
+  }
+  // Optionally seed the MCP server's policy cache, keyed by its stored server URL.
+  if (policy !== undefined) {
+    const url = "https://example-be.glean.com/mcp/gateway/proxy";
+    await fs.mkdir(dataDir, { recursive: true });
+    await fs.writeFile(
+      path.join(dataDir, "mcp-server-url.json"),
+      JSON.stringify({ serverUrl: url }),
+    );
+    await fs.writeFile(
+      path.join(dataDir, "policy-cache.json"),
+      JSON.stringify({ [url]: { policy } }),
     );
   }
   try {
@@ -86,8 +100,41 @@ const bypass = { permission_mode: "bypassPermissions", session_id: "sess-1" };
 
 describe("auto-approve-run-tool hook (Claude Code PreToolUse)", () => {
   it("allows glean run_tool when HITL is on", async () => {
-    const { out } = await runHook(glean("run_tool"), hitlOn);
+    const { out } = await runHook(glean("run_tool"), hitlOn, {
+      session_id: "sess-1",
+    });
     expect(JSON.parse(out).hookSpecificOutput.permissionDecision).toBe("allow");
+  });
+
+  it("keeps the native prompt when it cannot record the auto-approval", async () => {
+    // No session id means no marker, so the server could not tell the host
+    // prompt was suppressed. Fail toward prompting.
+    const { out } = await runHook(glean("run_tool"), hitlOn);
+    expect(out.trim()).toBe("");
+  });
+
+  it("keeps the native prompt when remote policy disables hitl", async () => {
+    const { out, marker } = await runHook(
+      glean("run_tool"),
+      hitlOn,
+      { session_id: "sess-1", permission_mode: "default" },
+      undefined,
+      { features: { hitl: { enabled: false } } },
+    );
+    expect(out.trim()).toBe("");
+    expect(marker?.auto_approved).toBe(false);
+  });
+
+  it("still auto-approves when remote policy keeps hitl on", async () => {
+    const { out, marker } = await runHook(
+      glean("run_tool"),
+      hitlOn,
+      { session_id: "sess-1", permission_mode: "default" },
+      undefined,
+      { features: { hitl: { enabled: true } } },
+    );
+    expect(JSON.parse(out).hookSpecificOutput.permissionDecision).toBe("allow");
+    expect(marker?.auto_approved).toBe(true);
   });
 
   it("never allows when HITL is off (safety)", async () => {
@@ -141,13 +188,13 @@ describe("auto-approve-run-tool hook (permission-mode marker)", () => {
     expect(marker).toBeNull();
   });
 
-  it("writes no marker when permission_mode is absent from the payload", async () => {
+  it("records an empty mode when permission_mode is absent from the payload", async () => {
     const { out, marker } = await runHook(glean("run_tool"), hitlOn, {
       session_id: "sess-1",
     });
-    // Still auto-approves, just has no mode to record.
+    // Still auto-approves; the marker carries the auto-approval with no mode.
     expect(JSON.parse(out).hookSpecificOutput.permissionDecision).toBe("allow");
-    expect(marker).toBeNull();
+    expect(marker).toMatchObject({ permission_mode: "", auto_approved: true });
   });
 
   it("sanitizes the session id used for the marker filename", async () => {
