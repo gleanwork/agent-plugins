@@ -1,0 +1,8 @@
+# Every change to this repo needs approval from a PACT reviewer.
+# The main branch ruleset requires code owner review, so GitHub blocks
+# merges until one of the owners below approves.
+#
+# Order matters: the last matching pattern wins. Keep this catch-all rule
+# first, and add any narrower rules below it.
+
+* @steve-calvert-glean @david-hamilton-glean
