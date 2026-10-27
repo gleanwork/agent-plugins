@@ -1,0 +1,10 @@
+# Every change to this repo needs approval from a member of the PACT team.
+# The main branch ruleset requires code owner review, so GitHub blocks
+# merges until a PACT member approves. Manage who can approve through the
+# team's membership, not this file. The team needs write access to this
+# repo, or GitHub ignores it here.
+#
+# Order matters: the last matching pattern wins. Keep this catch-all rule
+# first, and add any narrower rules below it.
+
+* @gleanwork/pact
