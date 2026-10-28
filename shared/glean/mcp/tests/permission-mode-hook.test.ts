@@ -87,10 +87,11 @@ const bypass = { permission_mode: "bypassPermissions", session_id: "sess-1" };
 describe("record-permission-mode hook (Claude Code PreToolUse)", () => {
   // Anthropic's plugin directory holds any plugin whose hook can decide a
   // permission question for the user (HOOK_GRANTS_PERMISSION). The check reads
-  // the file statically, so the decision must not appear anywhere in it.
+  // the file statically, so neither the decision nor its words may appear
+  // anywhere in it, comments included.
   it("contains no permission decision", async () => {
     const source = await fs.readFile(HOOK, "utf-8");
-    expect(source).not.toMatch(/permissionDecision|"allow"|"approve"/);
+    expect(source).not.toMatch(/permissionDecision|allow|approve/i);
   });
 
   it("prints nothing for glean run_tool when HITL is on", async () => {

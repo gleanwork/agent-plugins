@@ -6,8 +6,8 @@
 // with --dangerously-skip-permissions (permission_mode "bypassPermissions").
 //
 // This hook makes no permission decision and prints nothing. Claude Code's
-// normal permission flow always runs, and the server's elicitation prompt
-// still gates every write.
+// normal permission flow always runs. The server's elicitation prompt still
+// gates writes, except for tools the user told it to stop asking about.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
