@@ -154,7 +154,11 @@ function buildTransport(
 ): StreamableHTTPClientTransport {
   const parsedUrl = new URL(serverUrl);
   const headers: Record<string, string> = {
-    "X-Glean-Internal-Service": "true",
+    // Note: do NOT add an "X-Glean-Internal-Service" header here. Glean's
+    // public edge (GCP LB) refuses any external request carrying that
+    // internal-service marker with HTTP 403 before auth, which breaks the
+    // plugin's OAuth flow entirely (gleanwork/claude-plugins installs, 3.4.x
+    // and 3.5.x, were blocked on every instance).
     "X-Glean-Gateway-Request-Metadata": buildGatewayMetadataHeader(chatSessionId),
   };
 

@@ -70,6 +70,34 @@ describe("buildGatewayMetadataHeader", () => {
   });
 });
 
+describe("transport request headers", () => {
+  // Regression: plugin builds up to 3.5.1 sent X-Glean-Internal-Service: true
+  // on every gateway request. Glean's public edge 403s any external request
+  // carrying that internal marker, before auth, breaking setup on every
+  // instance (401 OAuth challenge without it, 403 with it).
+  it("omits the internal-service marker and keeps gateway metadata", async () => {
+    let captured: Headers | undefined;
+    const handler = createMcpHandler(() => {
+      return new McpServer({ name: "test", version: "1.0.0" });
+    });
+    const client = await createRemoteClient("http://test.local/mcp", {
+      fetch: (url, init) => {
+        const request = new Request(url, init);
+        captured ??= request.headers;
+        return handler.fetch(request);
+      },
+    });
+    try {
+      expect(captured).toBeDefined();
+      expect(captured!.has("x-glean-internal-service")).toBe(false);
+      expect(captured!.get("x-glean-gateway-request-metadata")).not.toBeNull();
+    } finally {
+      await client.close();
+      await handler.close();
+    }
+  });
+});
+
 describe("remoteToolTimeoutMs", () => {
   const KEY = "GLEAN_REMOTE_TOOL_TIMEOUT_MS";
   const original = process.env[KEY];
