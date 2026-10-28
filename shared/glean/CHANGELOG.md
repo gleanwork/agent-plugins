@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.6.1](https://github.com/gleanwork/agent-plugins/compare/v3.6.0...v3.6.1) (2026-10-28)
+
+### Bug Fixes
+
+* default run_tool approval to Allow once, not Always Allow ([#34](https://github.com/gleanwork/agent-plugins/issues/34)) ([1cd92da](https://github.com/gleanwork/agent-plugins/commit/1cd92da75da742f918ad6088f7eede64dd754418))
+* include synced plugin changelogs in the release commit ([#43](https://github.com/gleanwork/agent-plugins/issues/43)) ([e25db42](https://github.com/gleanwork/agent-plugins/commit/e25db42c411207b6bbb5c36adb90dbcb161d2232))
+* stop the Claude Code hook from approving run_tool calls ([#45](https://github.com/gleanwork/agent-plugins/issues/45)) ([e35c63c](https://github.com/gleanwork/agent-plugins/commit/e35c63cd06fb7e66ec79fc8dc8dd72703e65b8e2))
+
 ## [3.6.0](https://github.com/gleanwork/agent-plugins/compare/v3.5.1...v3.6.0) (2026-10-28)
 
 ### Features
