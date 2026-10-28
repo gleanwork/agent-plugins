@@ -2,7 +2,8 @@ name: Publish plugins
 
 # Sync generated plugin output into the published install-surface repos.
 # Runs on a published release: opens or updates a sync PR in each output repo,
-# then merges it. Can also be dispatched by hand: check mode from any ref
+# merges it, then tags the synced commit and creates a matching release in the
+# output repo. Can also be dispatched by hand: check mode from any ref
 # (fails if any output is stale), and sync mode from a release tag only, to
 # re-run a release's sync.
 on:
@@ -132,3 +133,36 @@ jobs:
           done
           echo "::error::Couldn't merge $REPO#$PR. Check that pluginpack-sync can bypass pull request reviews in $REPO, then merge the PR by hand."
           exit 1
+
+      # Give the output repo a release for this version, so its Releases page
+      # shows what it serves. The release tags the commit the sync PR merged,
+      # or the output repo's default branch when the output didn't change. A
+      # tag that already has a release is left alone, so re-running a release's
+      # sync is safe.
+      - name: Release ${{ matrix.repo }}
+        if: (inputs.mode || 'sync') == 'sync' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SOURCE_TOKEN: ${{ github.token }}
+          REPO: gleanwork/${{ matrix.repo }}
+          PR: ${{ steps.sync.outputs.pr-number }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" --repo "$REPO" > /dev/null 2>&1; then
+            echo "$REPO already has a release for $TAG."
+            exit 0
+          fi
+          if [ -n "$PR" ]; then
+            target=$(gh pr view "$PR" --repo "$REPO" --json mergeCommit --jq .mergeCommit.oid)
+          else
+            target=$(gh api "repos/$REPO/commits/HEAD" --jq .sha)
+          fi
+          notes="$RUNNER_TEMP/release-notes.md"
+          GH_TOKEN="$SOURCE_TOKEN" gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body > "$notes"
+          printf '\nBuilt from [%s %s](%s/%s/releases/tag/%s).\n' "$GITHUB_REPOSITORY" "$TAG" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$TAG" >> "$notes"
+          # Mark it latest only when it is the source repo's latest release, so
+          # re-running an older tag's sync doesn't relabel the output repo.
+          latest=$(GH_TOKEN="$SOURCE_TOKEN" gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          if [ "$latest" = "$TAG" ]; then make_latest=true; else make_latest=false; fi
+          gh release create "$TAG" --repo "$REPO" --target "$target" \
+            --title "Release ${TAG#v}" --notes-file "$notes" --latest="$make_latest"
