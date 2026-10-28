@@ -59,12 +59,14 @@ release is what triggers the actual plugin distribution (below).
      minor, `fix` → patch, a `BREAKING CHANGE` footer → major).
   2. Bump both the root `package.json` and
      `shared/glean/mcp/package.json` to the same version. Regenerate
-     `CHANGELOG.md`. Its `before:git:release` hook then runs `npm run build`,
-     after the changelog plugin has written the new entry and before release-it
-     commits and tags. The build syncs that changelog into `shared/glean` and
-     `shared/glean-dev-docs`, rebuilds the generated plugin output, and checks
-     that every shipped changelog matches the root — all of which is included
-     in the release commit.
+     `CHANGELOG.md`. Its `before:git:beforeRelease` hook then runs
+     `npm run build`, after the changelog plugin has written the new entry and
+     before release-it stages the release commit. The build syncs that
+     changelog into `shared/glean` and `shared/glean-dev-docs`, rebuilds the
+     generated plugin output, and checks that every shipped changelog matches
+     the root, so the synced changelogs are staged with the rest of the
+     release. A later hook such as `before:git:release` runs after staging, and
+     the synced changelogs would be left out of the commit.
   3. Commit as `chore: release v${version}`, tag `v${version}`, and push both
      to `main`.
   4. Create a GitHub Release from that tag.

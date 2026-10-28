@@ -43,3 +43,8 @@ jobs:
 
       - name: Build and validate all targets
         run: npm test
+
+      # The build syncs CHANGELOG.md into each shared plugin. publish.yml ships
+      # the committed copies, so a diff here means they're stale.
+      - name: Check committed plugin changelogs
+        run: git diff --exit-code -- shared/glean/CHANGELOG.md shared/glean-dev-docs/CHANGELOG.md
