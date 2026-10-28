@@ -153,15 +153,10 @@ function buildTransport(
   chatSessionId?: string,
 ): StreamableHTTPClientTransport {
   const parsedUrl = new URL(serverUrl);
+  // External clients must not send Glean internal-service headers; the edge WAF rejects them.
   const headers: Record<string, string> = {
-    "X-Glean-Internal-Service": "true",
     "X-Glean-Gateway-Request-Metadata": buildGatewayMetadataHeader(chatSessionId),
   };
-
-  const scParam = parsedUrl.searchParams.get("sc");
-  if (scParam) {
-    headers["X-Glean-Request-ScParams"] = scParam;
-  }
 
   const transportOpts: ConstructorParameters<typeof StreamableHTTPClientTransport>[1] = {
     requestInit: { headers },

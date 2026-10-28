@@ -211,3 +211,36 @@ describe("remote elicitation bridge", () => {
     }
   });
 });
+
+describe("remote transport headers", () => {
+  it("keeps gateway metadata without forwarding internal headers or removing sc", async () => {
+    const handler = createMcpHandler(
+      () => new McpServer({ name: "test", version: "1.0.0" }),
+    );
+    const requests: Request[] = [];
+    const client = await createRemoteClient(
+      "http://test.local/mcp?sc=request-scope",
+      {
+        fetch: (url, init) => {
+          const request = new Request(url, init);
+          requests.push(request);
+          return handler.fetch(request);
+        },
+      },
+    );
+
+    try {
+      expect(requests.length).toBeGreaterThan(0);
+      for (const request of requests) {
+        expect(new URL(request.url).searchParams.get("sc")).toBe("request-scope");
+        expect(request.headers.has("X-Glean-Internal-Service")).toBe(false);
+        expect(request.headers.has("X-Glean-Request-ScParams")).toBe(false);
+        expect(request.headers.has("X-Glean-Forced-ScParams")).toBe(false);
+        expect(request.headers.has("X-Glean-Gateway-Request-Metadata")).toBe(true);
+      }
+    } finally {
+      await client.close();
+      await handler.close();
+    }
+  });
+});
