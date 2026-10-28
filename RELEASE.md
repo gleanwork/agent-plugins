@@ -29,31 +29,32 @@ release is what triggers the actual plugin distribution (below).
     commit message (GitHub defaults this to the PR title). That message is
     now the _only_ thing conventional-changelog sees for the whole PR, so the
     PR title itself must be a valid Conventional Commit message.
-- Make sure you're releasing from an up-to-date `main` with a clean working
-  tree and dependencies installed:
-
-  ```sh
-  git checkout main
-  git pull
-  npm install
-  ```
-
 ## Release
 
-- `release-it`'s GitHub plugin needs a token with `repo` scope to create the
-  GitHub Release (this is the event the plugin sync below listens for):
+Run the **Release** workflow
+([`.github/workflows/release.yml`](./.github/workflows/release.yml)) from the
+Actions tab, on `main`:
 
-  ```sh
-  export GITHUB_TOKEN=ghp_...
-  ```
+1. Run it with **Dry run** checked (the default). The log shows the next
+   version and the changelog.
+2. If that looks right, run it again with **Dry run** unchecked.
 
-- Run the release:
+Leave **Version increment** on `auto` unless you need to override the
+version that the commits imply.
 
-  ```sh
-  npm run release
-  ```
+From the command line:
 
-  `release-it` will:
+```sh
+gh workflow run release.yml --repo gleanwork/agent-plugins --ref main
+gh workflow run release.yml --repo gleanwork/agent-plugins --ref main -f dry-run=false
+```
+
+The workflow runs `release-it` as the `pluginpack-sync` GitHub App. The app
+is the only actor the `main` ruleset lets push without a pull request, and a
+release the app creates triggers the publish workflow. A release created with
+the workflow's own `GITHUB_TOKEN` would not.
+
+`release-it` will:
 
   1. Determine the next version from commits since the last tag (`feat` →
      minor, `fix` → patch, a `BREAKING CHANGE` footer → major).
@@ -74,6 +75,23 @@ release is what triggers the actual plugin distribution (below).
   Nothing here is published to the npm registry — `npm.publish: false` in
   [`.release-it.json`](./.release-it.json).
 
+### Releasing from your machine
+
+Use the workflow. A local `npm run release` works only if you can push to
+`main` without a pull request, and it needs `GITHUB_TOKEN` set to a token
+with `repo` scope. Without the token, `release-it` would open a release form
+in your browser and report success while no release exists, so the
+`before:init` hook stops the release instead.
+
+Run it from an up-to-date `main` with a clean working tree:
+
+```sh
+git checkout main
+git pull
+npm ci
+GITHUB_TOKEN="$(gh auth token)" npm run release
+```
+
 ## What happens next (automatic)
 
 Publishing the GitHub Release triggers
@@ -84,18 +102,26 @@ Publishing the GitHub Release triggers
    repo (`gleanwork/claude-plugins`, `gleanwork/cursor-plugins`,
    `gleanwork/codex-plugins`), on a machine-owned `pluginpack/sync-<target>`
    branch labeled `pluginpack-sync`.
+3. Squash-merges each sync PR. Users get the release once these merge.
 
-Those PRs are regenerated and force-pushed on every sync — **don't push to
-them by hand or hand-edit their content**. Review and merge each one in its
-own repo once it looks right.
+The merge step needs `pluginpack-sync` to be allowed to bypass pull request
+reviews in each output repo. If a merge fails, the job says which PR to
+merge by hand.
 
-If you need those PRs to pick up a fix made on `main` _without_ cutting a new
-release, dispatch the workflow directly instead of running `release-it`
-again:
+The sync PRs are regenerated and force-pushed on every sync — **don't push
+to them by hand or hand-edit their content**.
+
+To get a fix on `main` to users, cut a release. Sync mode runs only on a
+release tag, so it never publishes unreleased code. To re-run a release's
+sync, for example after a failed job, dispatch the workflow on that tag:
 
 ```sh
-gh workflow run publish.yml --repo gleanwork/agent-plugins -f mode=sync
+gh workflow run publish.yml --repo gleanwork/agent-plugins --ref v3.6.0 -f mode=sync
 ```
 
-Use `-f mode=check` instead to only report staleness without opening or
-updating anything.
+Check mode runs on any ref and only reports whether the output repos are
+stale:
+
+```sh
+gh workflow run publish.yml --repo gleanwork/agent-plugins -f mode=check
+```

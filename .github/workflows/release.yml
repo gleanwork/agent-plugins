@@ -1,0 +1,82 @@
+name: Release
+
+# One-click release. A maintainer runs this from the Actions tab on main. It
+# runs release-it, which bumps the version, writes the changelog, commits,
+# tags, pushes to main, and creates the GitHub Release. The release then
+# triggers publish.yml, which syncs the plugin repos.
+on:
+  workflow_dispatch:
+    inputs:
+      increment:
+        description: Version increment. "auto" picks it from the commits since the last tag.
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
+      dry-run:
+        description: Dry run. Shows the version and changelog without committing, tagging, or releasing.
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Releases run from main only. Choose main under 'Use workflow from'."
+          exit 1
+
+      # The release commit goes straight to main, so it needs an actor that
+      # the main ruleset lets bypass pull requests. GITHUB_TOKEN can't, and a
+      # release created with GITHUB_TOKEN wouldn't trigger publish.yml.
+      - name: Mint release token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.PLUGINPACK_CLIENT_ID }}
+          private-key: ${{ secrets.PLUGINPACK_APP_KEY }}
+
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          # release-it reads the commits and tags since the last release.
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Commit as the app
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          user_id="$(gh api "/users/${APP_SLUG}[bot]" --jq .id)"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${user_id}+${APP_SLUG}[bot]@users.noreply.github.com"
+
+      - name: Run release-it
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          INCREMENT: ${{ inputs.increment }}
+          DRY_RUN: ${{ inputs.dry-run }}
+        run: |
+          args=(--ci)
+          if [ "$INCREMENT" != auto ]; then args+=("$INCREMENT"); fi
+          if [ "$DRY_RUN" = true ]; then args+=(--dry-run); fi
+          npx release-it "${args[@]}"
