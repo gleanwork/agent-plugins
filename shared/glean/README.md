@@ -1,24 +1,33 @@
 # Glean
 
-Official Glean plugin for supported AI hosts — enterprise search, code
-exploration, and people discovery in your development workflow.
+Official Glean plugin for [Claude Code](https://claude.com/claude-code). Search
+your company's knowledge, explore code across repos, find people and experts,
+and prepare for meetings, without leaving Claude.
+
+## Features
+
+- **Email sign-in.** Set up with your work email. The plugin finds your Glean
+  instance and signs you in through your browser.
+- **Approval before writes.** Tools that change data, such as sending a message
+  or creating a ticket, ask you to Allow, Always Allow or Deny first.
+- **Built-in Glean tools.** Search, read documents, chat with Glean Assistant,
+  memory, user activity, employee search and meeting lookup.
+- **Your organization's tools.** Find and run the skills and tools your Glean
+  admin has connected.
 
 ## Setup
 
 ### 1. Install the plugin
 
-Install from your host's plugin marketplace. This plugin's shared skills work
-across Claude Code, Claude Desktop chat, Claude Cowork, Cursor, and Codex; hooks
-and supporting agents depend on host support.
+```
+/plugin marketplace add gleanwork/claude-plugins
+/plugin install glean@glean-plugins
+```
 
 ### 2. Set up Glean
 
-Use the host's Glean setup flow. In Claude Code or Cowork, prompt the harness,
-for example: `Set up Glean for me`, then complete the browser OAuth flow when
-prompted. For hosts that do not start the bundled local server, register the
-Glean MCP endpoint in the host's MCP configuration and follow that host's
-authentication flow. Some hosts, such as Codex, require an explicit MCP login
-step.
+Ask Claude: `Set up Glean for me`. Enter your work email when asked, then
+finish signing in in your browser.
 
 ## What's Included
 
@@ -33,17 +42,28 @@ by task — there's no per-skill install. They cover:
 - **Personal productivity** — summarize your own activity, prep status updates, and surface what needs your attention.
 - **Skill authoring** — discover automation opportunities and generate new skills.
 
-The plugin provides a local Glean MCP server where the host supports bundled
-MCP. If no Glean tools are visible, use the host's Glean setup flow described
-above. Otherwise, Glean tools use whatever Glean MCP server is connected in the
-current host.
-
 ## Requirements
 
-- A current supported AI host that supports plugins and MCP
+- [Claude Code](https://claude.com/claude-code)
+- [Node.js](https://nodejs.org) 22 or later
 - A Glean account with MCP access
-- A Glean MCP endpoint if your host requires remote configuration (get it from
-  the [Glean admin settings](https://app.glean.com/admin/about-glean))
+
+The plugin's Glean tools run in Claude Code only. In Claude chat, Cowork and
+cloud sessions, add Glean as a custom connector instead, using your Glean MCP
+server URL (`[server-url]/mcp/[server-name]`, available from your
+[Glean admin](https://app.glean.com/admin/about-glean)).
+
+## Privacy
+
+The plugin connects only to Glean:
+
+- During setup, it sends your work email to `app.glean.com` to find your Glean
+  instance.
+- Requests to your Glean instance include the plugin and Claude Code versions,
+  and the Glean MCP servers configured in Claude Code. Other MCP servers are
+  counted, not named.
+- Sign-in tokens and caches stay on your computer, in Claude Code's plugin data
+  folder or `~/.glean`.
 
 ## Support
 

@@ -1,7 +1,19 @@
 # Glean for Codex
 
-Official Glean plugin for [Codex](https://developers.openai.com/codex) — enterprise search,
-code exploration, and people discovery directly in your development workflow.
+Official Glean plugin for [Codex](https://developers.openai.com/codex). Search
+your company's knowledge, explore code across repos, find people and experts,
+and prepare for meetings, right in your terminal.
+
+## Features
+
+- **Email sign-in.** Set up with your work email. The plugin finds your Glean
+  instance and signs you in through your browser.
+- **Approval before writes.** Tools that change data, such as sending a message
+  or creating a ticket, ask you to Allow, Always Allow or Deny first.
+- **Built-in Glean tools.** Search, read documents, chat with Glean Assistant,
+  memory, user activity, employee search and meeting lookup.
+- **Your organization's tools.** Find and run the skills and tools your Glean
+  admin has connected.
 
 ## Setup
 
@@ -14,9 +26,9 @@ codex plugin add glean@glean-codex-plugins
 
 ### 2. Set up Glean
 
-Start a new Codex task and prompt the harness: `Set up Glean for me`. Complete
-the browser OAuth flow when prompted, then start a new task so both the bundled
-skills and Glean MCP tools are available.
+Start a new Codex task and ask: `Set up Glean for me`. Enter your work email
+when asked, then finish signing in in your browser. Start a new task so both
+the bundled skills and Glean tools are available.
 
 ## What's Included
 
@@ -34,7 +46,21 @@ per-skill install. They cover:
 ## Requirements
 
 - [Codex](https://developers.openai.com/codex) with plugin support
+- [Node.js](https://nodejs.org) 22 or later
 - A Glean account with MCP access
+
+The Codex IDE extension doesn't support plugins. There, add your Glean MCP
+server URL (`[server-url]/mcp/[server-name]`, available from your
+[Glean admin](https://app.glean.com/admin/about-glean)) as an MCP server instead.
+
+## Privacy
+
+The plugin connects only to Glean:
+
+- During setup, it sends your work email to `app.glean.com` to find your Glean
+  instance.
+- Requests to your Glean instance include the plugin and Codex versions.
+- Sign-in tokens and caches stay on your computer, in `~/.glean`.
 
 ## Support
 
