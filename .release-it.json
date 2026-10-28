@@ -11,7 +11,7 @@
     "publish": false
   },
   "hooks": {
-    "before:git:release": "npm run build"
+    "before:git:beforeRelease": "npm run build"
   },
   "plugins": {
     "@release-it/bumper": {
