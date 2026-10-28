@@ -59,7 +59,7 @@ Capture tribal knowledge not in formal docs. Ask the current owner:
 ## Phase 3: Identify open items
 
 1. Search for open work: `search "[project] TODO OR action item OR blocked OR in progress"`
-2. Check recent commitments: `meeting_lookup "[project]"` over the past ~2 weeks (extract transcript)
+2. Check recent commitments: `meeting_lookup "[project]"` over the past ~2 weeks, then read the relevant transcripts with `read_document`
 3. Synthesize: `chat "What are the open action items, pending decisions, and blockers for [project]?"`
 4. Categorize: Immediate (1-2 weeks), Upcoming (next month), Future (backlog).
 
