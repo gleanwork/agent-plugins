@@ -7,6 +7,7 @@ import {
   type ElicitRequest,
   type ElicitResult,
 } from "@modelcontextprotocol/client";
+import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/client/validators/cf-worker";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { GleanOAuthClientProvider } from "./auth-provider.js";
 import { pluginVersionString } from "./version.js";
@@ -227,6 +228,11 @@ export async function createRemoteClient(
       // Probe for the 2026-07-28 protocol while retaining automatic fallback
       // for older Glean deployments.
       versionNegotiation: { mode: "auto" },
+      // The client validates remote tool results against each tool's
+      // outputSchema. The SDK's default validator is ajv, which would add
+      // about 270 KB to dist/index.js; build.mjs keeps it out of the bundle,
+      // so a validator must be passed here.
+      jsonSchemaValidator: new CfWorkerJsonSchemaValidator(),
     },
   );
 

@@ -26,8 +26,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/client": "^2.0.0",
-    "@modelcontextprotocol/sdk": "^1.12.1",
-    "yaml": "^2.7.0"
+    "@modelcontextprotocol/sdk": "^1.12.1"
   },
   "devDependencies": {
     "@gleanwork/pluginpack": "^0.11.0",
@@ -40,6 +39,7 @@
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "vitest": "^3.0.0",
+    "yaml": "^2.7.0",
     "zod": "^4.6.1"
   },
   "//overrides": "Pin hono>=4.12.25 (CVE-2026-54290, transitive from @modelcontextprotocol/sdk); pin esbuild/vite to clear CVE blocks that prevented install. Mirrors glean-experimental-plugins overrides.",

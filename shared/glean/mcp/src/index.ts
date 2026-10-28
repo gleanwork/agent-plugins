@@ -1,5 +1,6 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/client/validators/cf-worker";
 import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
@@ -136,7 +137,16 @@ function resolveSkillsBaseDir(): string {
 
 const server = new Server(
   { name: "glean", version: pluginVersionString() },
-  { capabilities: { tools: { listChanged: true } } },
+  {
+    capabilities: { tools: { listChanged: true } },
+    // The server validates the host's elicitation answers against the form's
+    // schema. The SDK's default validator is ajv, which would add about 250 KB
+    // to dist/index.js; build.mjs keeps it out of the bundle, so a validator
+    // must be passed here. This is the v2 client's validator, which the bundle
+    // already includes for remote-client.ts; it implements the same
+    // jsonSchemaValidator interface as the v1 SDK's own cf-worker validator.
+    jsonSchemaValidator: new CfWorkerJsonSchemaValidator(),
+  },
 );
 
 // Report the negotiated host/plugin context to the remote and enforce the

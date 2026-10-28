@@ -1,37 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import yaml from "yaml";
+import { parseFrontmatter } from "./frontmatter.js";
 import type { SkillsMap, SkillIndex } from "./types.js";
 
 function isInsideDir(filePath: string, dir: string): boolean {
   const resolved = path.resolve(filePath);
   return resolved.startsWith(path.resolve(dir) + path.sep);
-}
-
-/**
- * Parses YAML frontmatter from a SKILL.md string, returning key-value pairs
- * for top-level scalar fields (name, description, etc.).
- */
-function parseFrontmatter(content: string): Record<string, string> {
-  // Extract the YAML block between --- delimiters, allowing CRLF line endings.
-  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!match) {
-    return {};
-  }
-  const result: Record<string, string> = {};
-  try {
-    const parsed = yaml.parse(match[1]);
-    if (parsed && typeof parsed === "object") {
-      for (const [key, value] of Object.entries(parsed)) {
-        if (typeof value === "string") {
-          result[key] = value;
-        }
-      }
-    }
-  } catch {
-    return {};
-  }
-  return result;
 }
 
 /**

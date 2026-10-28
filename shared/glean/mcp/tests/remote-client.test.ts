@@ -212,6 +212,50 @@ describe("remote elicitation bridge", () => {
   });
 });
 
+describe("remote tool output validation", () => {
+  // The client checks structuredContent against the tool's outputSchema with the
+  // JSON Schema validator remote-client.ts passes in (the bundle has no ajv).
+  // The test server checks its own output first, so the test alters the
+  // response after it leaves the server to get bad output to the client.
+  it("accepts matching structured content and rejects content that doesn't match", async () => {
+    const handler = createMcpHandler(() => {
+      const server = new McpServer({ name: "test", version: "1.0.0" });
+      server.registerTool(
+        "count",
+        { inputSchema: z.object({}), outputSchema: z.object({ count: z.number() }) },
+        async () => ({
+          content: [{ type: "text", text: "1" }],
+          structuredContent: { count: 1 },
+        }),
+      );
+      return server;
+    });
+    let tamper = false;
+    const client = await createRemoteClient("http://test.local/mcp", {
+      fetch: async (url, init) => {
+        const response = await handler.fetch(new Request(url, init));
+        if (!tamper) return response;
+        const body = (await response.text()).replace('"count":1', '"count":"one"');
+        return new Response(body, { status: response.status, headers: response.headers });
+      },
+    });
+
+    try {
+      await client.listTools();
+      const ok = await callRemoteTool(client, "count", {});
+      expect(ok.structuredContent).toEqual({ count: 1 });
+
+      tamper = true;
+      await expect(callRemoteTool(client, "count", {})).rejects.toThrow(
+        /does not match the tool's output schema/,
+      );
+    } finally {
+      await client.close();
+      await handler.close();
+    }
+  });
+});
+
 describe("remote transport headers", () => {
   it("keeps gateway metadata without forwarding internal headers or removing sc", async () => {
     const handler = createMcpHandler(
