@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.6.0](https://github.com/gleanwork/agent-plugins/compare/v3.5.1...v3.6.0) (2026-10-28)
+
+### Features
+
+* **mcp:** promote meeting_lookup to a first-class plugin tool ([bcad1ae](https://github.com/gleanwork/agent-plugins/commit/bcad1ae61254a434e0936374f91be3db0607244a))
+
+### Bug Fixes
+
+* **mcp:** promote enterprise_search under the search name ([1024d08](https://github.com/gleanwork/agent-plugins/commit/1024d08d4dfefd6d0ebf4ea073e14332fefbb95d))
+* stop sending Glean internal-service headers from the plugin ([b5fa4af](https://github.com/gleanwork/agent-plugins/commit/b5fa4af9f37590dd0111c2ae737be6c9fe1267eb))
+
 ## [3.5.1](https://github.com/gleanwork/agent-plugins/compare/v3.5.0...v3.5.1) (2026-09-29)
 
 ### Bug Fixes
