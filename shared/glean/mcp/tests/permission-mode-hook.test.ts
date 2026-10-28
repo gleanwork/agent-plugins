@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const HOOK = path.resolve(
   here,
-  "../../../../overrides/claude/glean/hooks/auto-approve-run-tool.mjs",
+  "../../../../overrides/claude/glean/hooks/record-permission-mode.mjs",
 );
 
 interface HookResult {
@@ -84,13 +84,22 @@ const hitlOn = { ENABLE_HITL: "true" };
 const hitlOff = { ENABLE_HITL: "false" };
 const bypass = { permission_mode: "bypassPermissions", session_id: "sess-1" };
 
-describe("auto-approve-run-tool hook (Claude Code PreToolUse)", () => {
-  it("allows glean run_tool when HITL is on", async () => {
-    const { out } = await runHook(glean("run_tool"), hitlOn);
-    expect(JSON.parse(out).hookSpecificOutput.permissionDecision).toBe("allow");
+describe("record-permission-mode hook (Claude Code PreToolUse)", () => {
+  // Anthropic's plugin directory holds any plugin whose hook can decide a
+  // permission question for the user (HOOK_GRANTS_PERMISSION). The check reads
+  // the file statically, so neither the decision nor its words may appear
+  // anywhere in it, comments included.
+  it("contains no permission decision", async () => {
+    const source = await fs.readFile(HOOK, "utf-8");
+    expect(source).not.toMatch(/permissionDecision|allow|approve/i);
   });
 
-  it("never allows when HITL is off (safety)", async () => {
+  it("prints nothing for glean run_tool when HITL is on", async () => {
+    const { out } = await runHook(glean("run_tool"), hitlOn);
+    expect(out.trim()).toBe("");
+  });
+
+  it("prints nothing when HITL is off", async () => {
     const { out } = await runHook(glean("run_tool"), hitlOff);
     expect(out.trim()).toBe("");
   });
@@ -106,7 +115,7 @@ describe("auto-approve-run-tool hook (Claude Code PreToolUse)", () => {
   });
 });
 
-describe("auto-approve-run-tool hook (permission-mode marker)", () => {
+describe("record-permission-mode hook (permission-mode marker)", () => {
   it("records the permission_mode marker for run_tool when HITL is on", async () => {
     const { marker, markerFiles } = await runHook(
       glean("run_tool"),
@@ -145,8 +154,7 @@ describe("auto-approve-run-tool hook (permission-mode marker)", () => {
     const { out, marker } = await runHook(glean("run_tool"), hitlOn, {
       session_id: "sess-1",
     });
-    // Still auto-approves, just has no mode to record.
-    expect(JSON.parse(out).hookSpecificOutput.permissionDecision).toBe("allow");
+    expect(out.trim()).toBe("");
     expect(marker).toBeNull();
   });
 
