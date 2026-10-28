@@ -1,18 +1,20 @@
 name: Publish plugins
 
-# Sync generated plugin output into the published install-surface repos by
-# opening a PR in each. Runs on a published release; can also be dispatched
-# manually (use mode=check for a dry staleness check).
+# Sync generated plugin output into the published install-surface repos.
+# Runs on a published release: opens or updates a sync PR in each output repo,
+# then merges it. Can also be dispatched by hand: check mode from any ref
+# (fails if any output is stale), and sync mode from a release tag only, to
+# re-run a release's sync.
 on:
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       mode:
-        description: sync (open PRs) or check (fail if any output is stale)
+        description: check (fail if any output is stale) or sync (release tags only)
         type: choice
-        options: [sync, check]
-        default: sync
+        options: [check, sync]
+        default: check
 
 permissions:
   contents: read
@@ -22,6 +24,15 @@ jobs:
     name: Validate all targets
     runs-on: ubuntu-latest
     steps:
+      # Sync mode publishes to the output repos and merges the sync PRs, so it
+      # only runs on released code. Unreleased code reaches users by cutting a
+      # release.
+      - name: Sync only from a release tag
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'sync' && !startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "::error::sync mode updates the published plugin repos, so it runs only on a release tag. Choose a v* tag under 'Use workflow from', or run check mode."
+          exit 1
+
       - name: Checkout source
         uses: actions/checkout@v5
 
@@ -91,6 +102,7 @@ jobs:
           repositories: ${{ matrix.repo }}
 
       - name: Sync ${{ matrix.target }}
+        id: sync
         # Pinned pre-v1 (Actions requires the full SHA); repoint to @v1 after
         # the first proven sync.
         uses: gleanwork/pluginpack-action@52a7c266ffa90d35289f2a34e83db028c7945ccc
@@ -100,3 +112,23 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           pluginpack-version: ${{ steps.pp.outputs.version }}
           mode: ${{ inputs.mode || 'sync' }}
+
+      # The sync PR is built from a reviewed, validated release tag, so merge
+      # it here instead of by hand. pluginpack-sync must be allowed to bypass
+      # pull request reviews in the output repo. The action sets pr-number in
+      # sync mode only, and only when the output changed.
+      - name: Merge sync PR
+        if: steps.sync.outputs.pr-number != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: gleanwork/${{ matrix.repo }}
+          PR: ${{ steps.sync.outputs.pr-number }}
+        run: |
+          for _ in 1 2 3; do
+            if gh pr merge "$PR" --repo "$REPO" --squash --admin; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Couldn't merge $REPO#$PR. Check that pluginpack-sync can bypass pull request reviews in $REPO, then merge the PR by hand."
+          exit 1

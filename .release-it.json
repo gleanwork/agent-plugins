@@ -11,6 +11,7 @@
     "publish": false
   },
   "hooks": {
+    "before:init": "node scripts/check-release-token.mjs",
     "before:git:beforeRelease": "npm run build"
   },
   "plugins": {
