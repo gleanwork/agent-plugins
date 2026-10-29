@@ -8,15 +8,41 @@
 Official Glean plugins for [Claude](https://claude.com) — enterprise knowledge,
 search, people, code, and meetings.
 
-> **Surface support:** The shared skills are designed to work across Claude Code,
-Claude Desktop chat, and Claude Cowork. Hooks and supporting agents require host
-support: Claude Code and Cowork support them, while Claude Desktop chat does not
-run them. The plugin provides a local Glean MCP server where the host supports
-bundled MCP; otherwise, configure the remote server in the host's MCP settings.
-The automated checks validate package structure, not full runtime parity in every
-host.
+## Quick start (new install)
 
-## ⚠️ v3.0.0 — plugins consolidated (one-time migration)
+### Claude Code
+
+```
+/plugin marketplace add gleanwork/claude-plugins
+/plugin install glean@glean-plugins
+/plugin install glean-dev-docs@glean-plugins
+```
+
+Then ask Claude: `Set up Glean for me`. Enter your work email when asked, then
+finish signing in in your browser. Skills auto-trigger by task.
+
+### Claude Desktop, chat and Cowork
+
+Open **Customize → Plugins**, add the `gleanwork/claude-plugins` marketplace,
+and install **Glean** and **Glean Developer Docs**. The skills load here, but
+the `glean` plugin's Glean tools run only in Claude Code. Add Glean as a custom
+connector, using your Glean MCP server URL, and the skills use it. The
+[glean plugin README](plugins/glean) shows what works on each surface.
+
+## Plugins
+
+| Plugin | Description |
+|--------|-------------|
+| **[glean](plugins/glean)** | Enterprise knowledge — search docs/Slack/email, cross-repo code exploration, people & experts, meeting prep & catch-up, onboarding, productivity. |
+| **[glean-dev-docs](plugins/glean-dev-docs)** | Search Glean's public developer documentation — APIs, SDKs, MCP, and integration guides. |
+
+## Requirements
+
+- A Glean account with MCP access
+- For Glean tools in Claude Code: [Node.js](https://nodejs.org) 22 or later
+- For Claude chat and Cowork: your Glean MCP server URL (find it at [app.glean.com/admin/about-glean](https://app.glean.com/admin/about-glean)); format: `[server-url]/mcp/[server-name]`
+
+## Upgrading from v2 (one-time migration)
 
 The commands below are for Claude Code. In Claude Desktop or Cowork, use
 **Customize → Plugins** to remove the old marketplace and install the consolidated
@@ -59,40 +85,6 @@ Restart Claude Code if prompted. `glean` carries everything the old plugins did.
 (`glean-dev-docs` stays as-is.)
 
 </details>
-
-## Quick start (new install)
-
-### Claude Code
-
-```
-/plugin marketplace add gleanwork/claude-plugins
-/plugin install glean@glean-plugins
-/plugin install glean-dev-docs@glean-plugins
-```
-
-Then set up Glean by prompting the harness, for example: `Set up Glean for me`.
-Complete the browser OAuth flow when prompted. Skills auto-trigger by task.
-
-### Claude Desktop or Cowork
-
-Open **Customize → Plugins**, choose **Add marketplace**, and add
-`gleanwork/claude-plugins`. Install **Glean** and **Glean Developer Docs**.
-
-Then ask Claude to `Set up Glean for me` and complete the browser OAuth flow
-when prompted. Skills auto-trigger by task.
-
-## Plugins
-
-| Plugin | Description |
-|--------|-------------|
-| **[glean](plugins/glean)** | Enterprise knowledge — search docs/Slack/email, cross-repo code exploration, people & experts, meeting prep & catch-up, onboarding, productivity. |
-| **[glean-dev-docs](plugins/glean-dev-docs)** | Search Glean's public developer documentation — APIs, SDKs, MCP, and integration guides. |
-
-## Requirements
-
-- A current Claude host that supports plugins: [Claude Code](https://claude.com/claude-code), [Claude Desktop](https://claude.com/download), or [Claude Cowork](https://claude.com/product/cowork)
-- A Glean account with MCP access
-- Your Glean MCP server URL (find it at [app.glean.com/admin/about-glean](https://app.glean.com/admin/about-glean)); format: `[server-url]/mcp/[server-name]`
 
 ## Support
 

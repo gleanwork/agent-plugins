@@ -1,0 +1,7 @@
+- **Enterprise search & knowledge** — find documents, Slack messages, and email; vet results for freshness and authority.
+- **Code across repos** — explore implementations, find usage examples and similar code, identify code owners, and gather architectural context.
+- **People & org** — find experts by contribution, and identify stakeholders for a change or project.
+- **Meetings** — prep for upcoming meetings and catch up on what you missed.
+- **Onboarding & projects** — ramp up on a team or area, read quick project status, and generate comprehensive project handoffs.
+- **Personal productivity** — summarize your own activity, prep status updates, and surface what needs your attention.
+- **Skill authoring** — discover automation opportunities and generate new skills.
