@@ -26,11 +26,7 @@ codex mcp add glean --url [server-url]/mcp/[server-name]
 codex mcp login glean
 ```
 
-### Why a local server?
-
-Glean asks you to approve tools that change data, such as sending a message or
-creating a ticket. Hosts on MCP versions before 2026-07-28 can't show Glean's
-prompt, so the plugin's local server shows it instead.
+{{> glean-readme-local-server}}
 
 ## Setup
 
@@ -52,13 +48,7 @@ the bundled skills and Glean tools are available.
 The plugin ships a library of skills that auto-trigger by task — there's no
 per-skill install. They cover:
 
-- **Enterprise search & knowledge** — find documents, Slack messages, and email; vet results for freshness and authority.
-- **Code across repos** — explore implementations, find usage examples and similar code, identify code owners, and gather architectural context.
-- **People & org** — find experts by contribution, and identify stakeholders for a change or project.
-- **Meetings** — prep for upcoming meetings and catch up on what you missed.
-- **Onboarding & projects** — ramp up on a team or area, read quick project status, and generate comprehensive project handoffs.
-- **Personal productivity** — summarize your own activity, prep status updates, and surface what needs your attention.
-- **Skill authoring** — discover automation opportunities and generate new skills.
+{{> glean-readme-skills}}
 
 ## Requirements
 
@@ -75,12 +65,4 @@ The plugin connects only to Glean:
 - Requests to your Glean instance include the plugin and Codex versions.
 - Sign-in tokens and caches stay on your computer, in `~/.glean`.
 
-## Support
-
-- [Glean MCP Documentation](https://docs.glean.com/mcp)
-- [Glean Support](https://help.glean.com)
-- [GitHub Issues](https://github.com/gleanwork/agent-plugins/issues)
-
-## License
-
-MIT — see [LICENSE](LICENSE) for details.
+{{> glean-readme-support}}

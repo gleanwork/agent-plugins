@@ -7,6 +7,8 @@ const gleanPluginDescription =
 export default defineConfig({
   name: "glean-plugins",
   version: pkg.version,
+  // Shared README text, included with {{> name}} tags.
+  source: { partials: "partials" },
   metadata: {
     author: {
       name: "Glean",
