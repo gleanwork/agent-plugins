@@ -21,11 +21,13 @@ search, people, code, and meetings.
 Then ask Claude: `Set up Glean for me`. Enter your work email when asked, then
 finish signing in in your browser. Skills auto-trigger by task.
 
-### Claude chat and Cowork
+### Claude Desktop, chat and Cowork
 
-The `glean` plugin's Glean tools run in Claude Code only. In Claude chat and
-Cowork, add Glean as a custom connector instead, using your Glean MCP server
-URL.
+Open **Customize → Plugins**, add the `gleanwork/claude-plugins` marketplace,
+and install **Glean** and **Glean Developer Docs**. The skills load here, but
+the `glean` plugin's Glean tools run only in Claude Code. Add Glean as a custom
+connector, using your Glean MCP server URL, and the skills use it. The
+[glean plugin README](plugins/glean) shows what works on each surface.
 
 ## Plugins
 
@@ -36,10 +38,9 @@ URL.
 
 ## Requirements
 
-- [Claude Code](https://claude.com/claude-code)
-- [Node.js](https://nodejs.org) 22 or later
 - A Glean account with MCP access
-- For Claude chat and Cowork, your Glean MCP server URL (find it at [app.glean.com/admin/about-glean](https://app.glean.com/admin/about-glean)); format: `[server-url]/mcp/[server-name]`
+- For Glean tools in Claude Code: [Node.js](https://nodejs.org) 22 or later
+- For Claude chat and Cowork: your Glean MCP server URL (find it at [app.glean.com/admin/about-glean](https://app.glean.com/admin/about-glean)); format: `[server-url]/mcp/[server-name]`
 
 ## Upgrading from v2 (one-time migration)
 

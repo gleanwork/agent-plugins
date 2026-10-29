@@ -4,16 +4,37 @@ Official Glean plugin for [Codex](https://developers.openai.com/codex). Search
 your company's knowledge, explore code across repos, find people and experts,
 and prepare for meetings, right in your terminal.
 
-## Features
+## Where it works
 
-- **Email sign-in.** Set up with your work email. The plugin finds your Glean
-  instance and signs you in through your browser.
-- **Approval before writes.** Tools that change data, such as sending a message
-  or creating a ticket, ask you to Allow, Always Allow or Deny first.
-- **Built-in Glean tools.** Search, read documents, chat with Glean Assistant,
-  memory, user activity, employee search and meeting lookup.
-- **Your organization's tools.** Find and run the skills and tools your Glean
-  admin has connected.
+The plugin has two parts:
+
+- **Skills** that Codex loads from the plugin.
+- **Glean tools** from a local MCP server that the plugin starts.
+
+| Surface                          | Skills            | Glean tools               |
+| -------------------------------- | ----------------- | ------------------------- |
+| Codex CLI                        | Yes               | Yes, from the plugin      |
+| Codex in the ChatGPT desktop app | Not supported yet | Not supported yet         |
+| Codex IDE extension              | No                | Add your Glean MCP server |
+
+The Codex IDE extension doesn't support plugins. To add your Glean MCP server
+there, use its URL (`[server-url]/mcp/[server-name]`, available from your
+[Glean admin](https://app.glean.com/admin/about-glean)):
+
+```bash
+codex mcp add glean --url [server-url]/mcp/[server-name]
+codex mcp login glean
+```
+
+### Why a local server?
+
+It does two things that hosts can't do with Glean yet:
+
+- **Sign-in.** Each Glean instance has its own MCP URL. The local server finds
+  yours from your work email and signs you in through your browser.
+- **Approval before writes.** Glean asks you to approve tools that change data,
+  such as sending a message or creating a ticket. Hosts on MCP versions before
+  2026-07-28 can't show Glean's prompt, so the local server shows it instead.
 
 ## Setup
 
@@ -48,10 +69,6 @@ per-skill install. They cover:
 - [Codex](https://developers.openai.com/codex) with plugin support
 - [Node.js](https://nodejs.org) 22 or later
 - A Glean account with MCP access
-
-The Codex IDE extension doesn't support plugins. There, add your Glean MCP
-server URL (`[server-url]/mcp/[server-name]`, available from your
-[Glean admin](https://app.glean.com/admin/about-glean)) as an MCP server instead.
 
 ## Privacy
 

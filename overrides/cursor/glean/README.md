@@ -4,16 +4,32 @@ Official Glean plugin for [Cursor](https://cursor.com). Search your company's
 knowledge, explore code across repos, find people and experts, and prepare for
 meetings, right in your editor.
 
-## Features
+## Where it works
 
-- **Email sign-in.** Set up with your work email. The plugin finds your Glean
-  instance and signs you in through your browser.
-- **Approval before writes.** Tools that change data, such as sending a message
-  or creating a ticket, ask you to Allow, Always Allow or Deny first.
-- **Built-in Glean tools.** Search, read documents, chat with Glean Assistant,
-  memory, user activity, employee search and meeting lookup.
-- **Your organization's tools.** Find and run the skills and tools your Glean
-  admin has connected.
+The plugin has two parts:
+
+- **Skills, agents and rules** that Cursor loads from the plugin.
+- **Glean tools** from a local MCP server that the plugin starts.
+
+| Surface                        | Skills            | Glean tools                     |
+| ------------------------------ | ----------------- | ------------------------------- |
+| Cursor editor and Agent Window | Yes               | Yes, from the plugin            |
+| Cursor CLI                     | Not supported yet | Add your Glean MCP server       |
+| Cursor Cloud Agents            | Not supported yet | Add your Glean MCP server       |
+
+To add your Glean MCP server, put its URL (`[server-url]/mcp/[server-name]`,
+available from your [Glean admin](https://app.glean.com/admin/about-glean)) in
+Cursor's MCP settings.
+
+### Why a local server?
+
+It does two things that hosts can't do with Glean yet:
+
+- **Sign-in.** Each Glean instance has its own MCP URL. The local server finds
+  yours from your work email and signs you in through your browser.
+- **Approval before writes.** Glean asks you to approve tools that change data,
+  such as sending a message or creating a ticket. Hosts on MCP versions before
+  2026-07-28 can't show Glean's prompt, so the local server shows it instead.
 
 ## Setup
 

@@ -1,33 +1,60 @@
 # Glean
 
-Official Glean plugin for [Claude Code](https://claude.com/claude-code). Search
-your company's knowledge, explore code across repos, find people and experts,
-and prepare for meetings, without leaving Claude.
+Official Glean plugin for [Claude](https://claude.com). Search your company's
+knowledge, explore code across repos, find people and experts, and prepare for
+meetings.
 
-## Features
+## Where it works
 
-- **Email sign-in.** Set up with your work email. The plugin finds your Glean
-  instance and signs you in through your browser.
-- **Approval before writes.** Tools that change data, such as sending a message
-  or creating a ticket, ask you to Allow, Always Allow or Deny first.
-- **Built-in Glean tools.** Search, read documents, chat with Glean Assistant,
-  memory, user activity, employee search and meeting lookup.
-- **Your organization's tools.** Find and run the skills and tools your Glean
-  admin has connected.
+The plugin has two parts, and they work in different places:
+
+- **Skills** load wherever Claude loads plugins. Agents run in Claude Code and
+  Cowork.
+- **Glean tools** come from a local MCP server that the plugin starts. Glean
+  supports it in Claude Code.
+
+| Surface                    | Skills | Glean tools                     |
+| -------------------------- | ------ | ------------------------------- |
+| Claude Code                | Yes    | Yes, from the plugin            |
+| Cowork                     | Yes    | Add Glean as a custom connector |
+| Claude chat                | Yes    | Add Glean as a custom connector |
+| Claude Code cloud sessions | No     | Add Glean as a custom connector |
+
+For a custom connector, use your Glean MCP server URL
+(`[server-url]/mcp/[server-name]`, available from your
+[Glean admin](https://app.glean.com/admin/about-glean)). The skills use
+whichever Glean tools are connected.
+
+### Why a local server?
+
+It does two things that hosts can't do with Glean yet:
+
+- **Sign-in.** Each Glean instance has its own MCP URL. The local server finds
+  yours from your work email and signs you in through your browser.
+- **Approval before writes.** Glean asks you to approve tools that change data,
+  such as sending a message or creating a ticket. Hosts on MCP versions before
+  2026-07-28 can't show Glean's prompt, so the local server shows it instead.
 
 ## Setup
 
 ### 1. Install the plugin
+
+In Claude Code:
 
 ```
 /plugin marketplace add gleanwork/claude-plugins
 /plugin install glean@glean-plugins
 ```
 
+In Claude Desktop or Cowork, open **Customize → Plugins**, add the
+`gleanwork/claude-plugins` marketplace, and install **Glean**.
+
 ### 2. Set up Glean
 
-Ask Claude: `Set up Glean for me`. Enter your work email when asked, then
-finish signing in in your browser.
+In Claude Code, ask Claude: `Set up Glean for me`. Enter your work email when
+asked, then finish signing in in your browser.
+
+Everywhere else, add Glean as a custom connector.
 
 ## What's Included
 
@@ -44,14 +71,8 @@ by task — there's no per-skill install. They cover:
 
 ## Requirements
 
-- [Claude Code](https://claude.com/claude-code)
-- [Node.js](https://nodejs.org) 22 or later
 - A Glean account with MCP access
-
-The plugin's Glean tools run in Claude Code only. In Claude chat, Cowork and
-cloud sessions, add Glean as a custom connector instead, using your Glean MCP
-server URL (`[server-url]/mcp/[server-name]`, available from your
-[Glean admin](https://app.glean.com/admin/about-glean)).
+- For Glean tools in Claude Code: [Node.js](https://nodejs.org) 22 or later
 
 ## Privacy
 
