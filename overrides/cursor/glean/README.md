@@ -23,13 +23,9 @@ Cursor's MCP settings.
 
 ### Why a local server?
 
-It does two things that hosts can't do with Glean yet:
-
-- **Sign-in.** Each Glean instance has its own MCP URL. The local server finds
-  yours from your work email and signs you in through your browser.
-- **Approval before writes.** Glean asks you to approve tools that change data,
-  such as sending a message or creating a ticket. Hosts on MCP versions before
-  2026-07-28 can't show Glean's prompt, so the local server shows it instead.
+Glean asks you to approve tools that change data, such as sending a message or
+creating a ticket. Hosts on MCP versions before 2026-07-28 can't show Glean's
+prompt, so the plugin's local server shows it instead.
 
 ## Setup
 
