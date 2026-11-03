@@ -325,3 +325,48 @@ export async function callRemoteTool(
   }
   return result as CallToolResult;
 }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringField(record: Record<string, unknown>, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value) return value;
+  }
+  return undefined;
+}
+
+export function appendInvocationMetadata(result: CallToolResult): CallToolResult {
+  const withMeta = result as CallToolResult & {
+    _meta?: unknown;
+    structuredContent?: unknown;
+  };
+  const meta = isRecord(withMeta._meta) ? withMeta._meta : {};
+  const structured = isRecord(withMeta.structuredContent) ? withMeta.structuredContent : {};
+  const invocationId =
+    stringField(meta, "glean/invocationId", "glean_invocation_id", "invocationId") ??
+    stringField(structured, "glean_invocation_id", "invocationId");
+  const logId = stringField(meta, "log_id", "logId") ?? stringField(structured, "log_id", "logId");
+  const lines = [
+    invocationId ? `glean_invocation_id: ${invocationId}` : undefined,
+    logId ? `log_id: ${logId}` : undefined,
+  ].filter((line): line is string => !!line);
+  if (lines.length === 0) return result;
+
+  const existingText = result.content
+    .filter((item) => item.type === "text")
+    .map((item) => item.text)
+    .join("\n");
+  const missing = lines.filter((line) => !existingText.includes(line));
+  if (missing.length === 0) return result;
+
+  return {
+    ...result,
+    content: [
+      ...result.content,
+      { type: "text", text: `\n${missing.join("\n")}` },
+    ],
+  };
+}

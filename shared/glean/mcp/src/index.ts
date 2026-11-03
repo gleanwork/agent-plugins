@@ -181,13 +181,7 @@ function getRemoteClientOpts(): RemoteClientOptions {
     ...(supportsElicitation
       ? {
           elicitInput: (params, options) =>
-            server.elicitInput(
-              {
-                message: params.message,
-                requestedSchema: params.requestedSchema,
-              },
-              options,
-            ),
+            server.elicitInput(params, options),
         }
       : {}),
   };

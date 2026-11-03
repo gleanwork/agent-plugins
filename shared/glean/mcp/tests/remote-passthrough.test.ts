@@ -46,6 +46,7 @@ describe("REMOTE_TOOLS_ALLOWLIST", () => {
       "memory_schema",
       "read_document",
       "search",
+      "submit_feedback",
       "user_activity",
     ]);
   });
@@ -111,13 +112,14 @@ describe("fetchAllowedRemoteTools", () => {
           { name: "not_allowed", description: "Excluded", inputSchema: { type: "object", properties: {}, required: [] } },
           { name: "weird_unknown", description: "x", inputSchema: { type: "object" } },
           { name: "search", description: "Search", inputSchema: { type: "object", properties: { q: { type: "string" } }, required: ["q"] } },
+          { name: "submit_feedback", description: "Feedback", inputSchema: { type: "object", properties: { feedback: { type: "string" } }, required: ["feedback"] } },
         ],
       },
     ]);
 
     const tools = await fetchAllowedRemoteTools(client);
 
-    expect(tools.map((t) => t.name).sort()).toEqual(["search"]);
+    expect(tools.map((t) => t.name).sort()).toEqual(["search", "submit_feedback"]);
     const search = tools.find((t) => t.name === "search")!;
     expect(search.description).toBe("Search");
     expect(search.inputSchema.properties).toMatchObject({
@@ -187,6 +189,22 @@ describe("dispatchRemoteTool", () => {
     expect(result).toEqual({
       content: [{ type: "text", text: "remote response" }],
     });
+  });
+
+  it("appends remote invocation metadata to promoted tool results", async () => {
+    const remote = makeRemote();
+    mockedCreate.mockResolvedValue(remote);
+    mockedCall.mockResolvedValue({
+      content: [{ type: "text", text: "feedback submitted" }],
+      _meta: { "glean/invocationId": "inv-123", log_id: "log-456" },
+    } as any);
+
+    const result = await dispatchRemoteTool("submit_feedback", { feedback: "bug" }, makeCtx());
+
+    expect(result.content).toEqual([
+      { type: "text", text: "feedback submitted" },
+      { type: "text", text: "\nglean_invocation_id: inv-123\nlog_id: log-456" },
+    ]);
   });
 
   it("returns setup-redirect envelope on AuthRequiredError", async () => {

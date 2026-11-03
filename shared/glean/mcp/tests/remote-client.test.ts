@@ -10,6 +10,7 @@ import {
 } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import {
+  appendInvocationMetadata,
   buildGatewayMetadataHeader,
   callRemoteTool,
   createRemoteClient,
@@ -145,6 +146,31 @@ describe("callRemoteTool", () => {
   });
 });
 
+describe("appendInvocationMetadata", () => {
+  it("adds invocation and log IDs from result metadata", () => {
+    const result = appendInvocationMetadata({
+      content: [{ type: "text", text: "ok" }],
+      _meta: { "glean/invocationId": "inv-1", log_id: "log-1" },
+    } as any);
+
+    expect(result.content).toEqual([
+      { type: "text", text: "ok" },
+      { type: "text", text: "\nglean_invocation_id: inv-1\nlog_id: log-1" },
+    ]);
+  });
+
+  it("does not duplicate IDs already present in text", () => {
+    const result = appendInvocationMetadata({
+      content: [{ type: "text", text: "ok\nglean_invocation_id: inv-1" }],
+      _meta: { "glean/invocationId": "inv-1" },
+    } as any);
+
+    expect(result.content).toEqual([
+      { type: "text", text: "ok\nglean_invocation_id: inv-1" },
+    ]);
+  });
+});
+
 describe("remote elicitation bridge", () => {
   it("forwards input_required to the local host and resumes with requestState", async () => {
     let invocations = 0;
@@ -197,6 +223,7 @@ describe("remote elicitation bridge", () => {
       expect(result.content).toEqual([{ type: "text", text: "executed" }]);
       expect(elicitInput).toHaveBeenCalledTimes(1);
       expect(elicitInput.mock.calls[0][0]).toMatchObject({
+        mode: "form",
         message: "Approve this action?",
         requestedSchema: {
           type: "object",

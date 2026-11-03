@@ -2,6 +2,7 @@ import type { Client } from "@modelcontextprotocol/client";
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import {
   AuthRequiredError,
+  appendInvocationMetadata,
   callRemoteTool,
   createRemoteClient,
   type RemoteClientOptions,
@@ -23,6 +24,7 @@ export const REMOTE_TOOLS_ALLOWLIST: ReadonlySet<string> = new Set([
   "memory_schema",
   "user_activity",
   "employee_search",
+  "submit_feedback",
 ]);
 
 type ToolInputSchema = Tool["inputSchema"];
@@ -129,7 +131,9 @@ export async function dispatchRemoteTool(
   }
 
   try {
-    const result = await callRemoteTool(remoteClient, toolName, args);
+    const result = appendInvocationMetadata(
+      await callRemoteTool(remoteClient, toolName, args),
+    );
     if (result.isError) {
       ctx.logLine("dispatch.remote-isError", {
         label: toolName,

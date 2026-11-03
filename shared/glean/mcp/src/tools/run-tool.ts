@@ -5,7 +5,7 @@ import { EmptyResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { callRemoteTool } from "../remote-client.js";
+import { appendInvocationMetadata, callRemoteTool } from "../remote-client.js";
 import { FILE_ARGS_DISABLED_TEXT } from "../policy/enforce.js";
 import { resolveSessionId } from "../session-id.js";
 import { hostSharedDataDir } from "../data-dir.js";
@@ -485,7 +485,9 @@ export async function handleRunTool(
   // Read-only tools are exempt from Glean's configurable approval requirements,
   // so they do not need an approval lookup.
   if (isKnownReadOnlyTool(toolMetadata, serverId, toolName)) {
-    return callRemoteTool(remoteClient, "run_tool", remoteArgs);
+    return appendInvocationMetadata(
+      await callRemoteTool(remoteClient, "run_tool", remoteArgs),
+    );
   }
 
   let requiresApproval = true;
@@ -591,7 +593,9 @@ export async function handleRunTool(
     }
   }
 
-  return callRemoteTool(remoteClient, "run_tool", remoteArgs);
+  return appendInvocationMetadata(
+    await callRemoteTool(remoteClient, "run_tool", remoteArgs),
+  );
 }
 
 /**
