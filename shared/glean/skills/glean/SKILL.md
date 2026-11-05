@@ -1,6 +1,6 @@
 ---
 name: glean
-description: Answer questions about the company: documents, messages, email, tickets, people, meetings, projects, and the user's own work. Use for questions like "what's the latest on the Q3 launch?", "find the onboarding guide for new sales hires", "who should I talk to about the pricing change?", "prep me for my 2pm meeting", or "what did I work on this week?". Gives a cited, up-to-date answer in as few tool calls as possible.
+description: "Answer questions about the company's documents, messages, email, tickets, people, meetings and projects, and about the user's own work. Use for questions like \"what's the latest on the Q3 launch?\", \"find the onboarding guide for new sales hires\", \"who should I talk to about the pricing change?\", \"prep me for my 2pm meeting\", or \"what did I work on this week?\". Gives a cited, up-to-date answer in as few tool calls as possible."
 ---
 
 # Glean
