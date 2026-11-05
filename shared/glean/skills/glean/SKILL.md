@@ -5,28 +5,17 @@ description: Default way to answer any question about the user's company with Gl
 
 # Glean
 
-Answer from the user's company knowledge, grounded in sources, using the fewest tool calls that still give a complete answer.
+Answer from company knowledge with cited sources, in the fewest tool calls.
 
-## Pick the cheapest tool that answers
+Tools come from the user's Glean MCP server (`mcp__glean_<server>__<tool>`); use whichever are available, and if none are, ask the user to set up Glean.
 
-Glean tools come from the user's Glean MCP server (`mcp__glean_<server>__<tool>`). Use whichever are available. If none are, ask the user to set up Glean.
+- Docs, Slack, tickets: `search`, narrowed with filters (`owner:`, `updated:`, `after:`, app).
+- People and owners: `employee_search`, never `search`.
+- Meetings and decisions: `meeting_lookup`.
+- Who the user is and what they work on: `memory`, `user_activity`.
+- Full text of a URL or of a result you will cite: `read_document`.
+- Synthesis across many sources: one `chat` call instead of many searches.
 
-- Docs, wikis, Slack, tickets: `search`. Add filters (`owner:`, `from:`, `updated:`, `after:`, app) in place of a broader query.
-- People, owners, teams, reporting lines: `employee_search`. Never `search`.
-- Meetings, decisions, action items: `meeting_lookup`.
-- The user's own role, projects, preferences and recent work: `memory` and `user_activity`. Check `memory` first when the answer depends on who is asking.
-- A URL the user gave, or a result whose snippet isn't enough: `read_document`. Read only what you will cite.
-- A question that needs reasoning across many sources: `chat`, once, instead of many searches.
+Run independent calls in parallel. Retry with new keywords at most twice. Stop once answered.
 
-## Work cheaply
-
-1. Run independent calls in parallel.
-2. Start narrow. Broaden only if results are empty or off-topic, and re-run at most twice with different keywords.
-3. Stop once the question is answered. Don't fetch extra pages to be thorough.
-
-## Answer well
-
-- Lead with the answer, then the supporting points.
-- Cite every claim with its source link. No link, no claim.
-- Prefer recent sources and say when one is old or when sources disagree.
-- Empty results can mean the user has no access. Say so, and don't guess or pad.
+Cite every claim with its link. Flag stale or conflicting sources. Empty results may mean no access: say so, don't guess.
