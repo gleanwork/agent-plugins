@@ -1,6 +1,6 @@
 # `read_document` — fetch full content by URL
 
-Retrieve the complete content of one or more URLs (internal Glean-indexed resources or public web pages). The natural follow-up to `search`, `code_search`, `gmail_search`, etc., when you have a URL and need the body.
+Retrieve the complete content of one or more URLs (internal Glean-indexed resources or public web pages). The natural follow-up to `search`, or to any other Glean search tool you have, when you have a URL and need the body.
 
 ## When to use
 

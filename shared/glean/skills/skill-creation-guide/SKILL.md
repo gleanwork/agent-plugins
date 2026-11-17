@@ -46,9 +46,10 @@ When the user asks what they should automate, analyze their work patterns first.
 Requires the Glean MCP tools. If they aren't visible, ask the user to set up
 Glean by prompting the harness (for example, `Set up Glean for me`).
 
-1. Gather context with Glean: `memory` (roles, responsibilities, active
-   projects), `user_activity` (past ~2 weeks), and `search` for process docs
-   (`"runbook OR checklist OR process owner:me"`).
+1. Gather context with Glean: `search` for process docs
+   (`"runbook OR checklist OR process owner:me"`), plus `memory` (roles,
+   responsibilities, active projects) and `user_activity` (past ~2 weeks) if
+   they are in your tool list.
 2. Spawn the `work-pattern-analyzer` agent to identify repeated queries,
    frequent contexts, workflow sequences, and manual processes — and to vet each
    candidate against the recurrence/value tests above.
@@ -56,8 +57,7 @@ Glean by prompting the harness (for example, `Set up Glean for me`).
    rejected candidates with reasons. A few high-quality candidates beat many
    weak ones — "no automatable patterns" is a valid outcome.
 
-See `using-glean/reference/` for the param shape of `memory`, `user_activity`,
-and `search`.
+See `using-glean/reference/` for the param shape of each tool.
 
 ## Workflow B — Generate a skill
 
@@ -102,8 +102,10 @@ Brief overview of what this skill does.
 2. **Progressive disclosure.** Essential action first; detail and edge cases
    below. Push deep, load-on-demand material into `reference/*.md`.
 3. **Actionable, imperative content.** "Search for X", not "Searches for X."
-4. **Name the tools** the skill uses (e.g. Glean `search`, `memory`; or `Grep`,
-   `Read`).
+4. **Name the tools** the skill uses (e.g. Glean `search`, `read_document`; or
+   `Grep`, `Read`). Glean's tool list differs between deployments, so for any
+   Glean tool beyond `search`, `read_document`, `chat`, and `employee_search`,
+   say what to do when it is missing.
 5. **Stay host-agnostic.** Don't hard-code one host's slash-command syntax or
    install paths; describe the capability and let each host resolve it.
 

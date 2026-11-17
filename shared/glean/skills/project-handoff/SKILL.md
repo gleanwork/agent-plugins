@@ -21,7 +21,7 @@ This skill drives the standard Glean MCP tools. If the host exposes the
 `project-synthesizer` agent, use it for project research. Otherwise delegate to
 a suitable research subagent when subagents are available, or gather the same
 material directly. For the param shape and pitfalls of `search`, `chat`,
-`meeting_lookup`, and `employee_search`, see the using-glean reference at
+`employee_search`, and (if it is available) `meeting_lookup`, see the using-glean reference at
 `using-glean/reference/`. If no Glean tools are visible, ask the user to set up
 Glean by prompting the harness (for example, `Set up Glean for me`).
 

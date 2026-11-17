@@ -5,7 +5,7 @@ description: Synthesize the user's own work activity, priorities, and recent con
 
 # Using Glean for Personal Productivity
 
-This skill drives queries about the user's own work life — their recent activity, what they accomplished, what's pending, what's urgent. It pulls from `user_activity`, `meeting_lookup`, `search` (with `from:me` / `owner:me`), and `memory` to assemble a personal view rather than an enterprise-wide one.
+This skill drives queries about the user's own work life — their recent activity, what they accomplished, what's pending, what's urgent. It pulls from `search` (with `from:me` / `owner:me`) to assemble a personal view rather than an enterprise-wide one. It also uses `user_activity`, `meeting_lookup`, and `memory` when they are in your tool list; if one is missing, use `search` for that part, and say what you couldn't check.
 
 ## Two shapes of question
 
@@ -21,7 +21,7 @@ The two overlap (a recent activity feed is the substrate for triaging priorities
 `user_activity`, `memory`, `search`, and `meeting_lookup` are documented canonically in the `using-glean` skill:
 
 - [`../using-glean/reference/user-activity.md`](../using-glean/reference/user-activity.md) — date-range mechanics, the inclusive/exclusive end-date pitfall
-- [`../using-glean/reference/memory.md`](../using-glean/reference/memory.md) — `memory` + `memory_schema` for personalization
+- [`../using-glean/reference/memory.md`](../using-glean/reference/memory.md) — `memory` + `memory_schema` for personalization, if available
 - [`../using-glean/reference/search.md`](../using-glean/reference/search.md) — for documents the user authored or was mentioned in
 - [`../using-glean/reference/meeting-lookup.md`](../using-glean/reference/meeting-lookup.md) — for meetings the user attended
 

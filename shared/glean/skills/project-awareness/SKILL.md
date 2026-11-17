@@ -11,7 +11,7 @@ Determine the project or topic from the user's request. If no project name is cl
 
 ## Tools
 
-This skill drives the standard Glean MCP tools. For full param shape and pitfalls of `chat`, `search`, `employee_search`, and `meeting_lookup`, see the using-glean reference at `using-glean/reference/`.
+This skill drives the standard Glean MCP tools. For full param shape and pitfalls of `chat`, `search`, `employee_search`, and (if it is available) `meeting_lookup`, see the using-glean reference at `using-glean/reference/`.
 
 ## When This Applies
 
@@ -70,7 +70,7 @@ chat "What is the current status of [project]? Who owns it and what are the rece
 For deeper investigation, combine:
 - `search` for project documentation
 - `employee_search` for people
-- `meeting_lookup` for recent discussions
+- `meeting_lookup` for recent discussions, if it is available
 
 ## Query Patterns
 

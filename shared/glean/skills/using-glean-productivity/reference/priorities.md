@@ -17,10 +17,10 @@ Prospective questions: what needs the user's attention right now.
 | Source | What it surfaces |
 |---|---|
 | `search` for direct mentions of the user | People tagging or @-mentioning them |
-| `meeting_lookup` for recent meetings | Action items assigned to them |
+| `meeting_lookup` for recent meetings, if available | Action items assigned to them |
 | `search` for "urgent" / "ASAP" / "blocking" + their name | Explicit urgency markers |
-| Email tools (`gmail_search` / `outlook_search`) with `is:important is:unread` | Unread important threads |
-| `user_activity` (recent) | Threads they have been engaged in |
+| Email tools (`gmail_search` / `outlook_search`) with `is:important is:unread`, if available | Unread important threads |
+| `user_activity` (recent), if available | Threads they have been engaged in |
 
 ## Workflow
 

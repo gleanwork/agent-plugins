@@ -9,7 +9,7 @@ Search documents across all the user's Glean-indexed sources (Confluence, Google
 - Any "where is the doc about …" question
 - Starting point before reading individual documents with `read_document`
 
-**Don't** use `search` for people (use `employee_search`), code (`code_search`), email (`gmail_search` / `outlook_search`), or meetings (`meeting_lookup`).
+**Don't** use `search` for people; use `employee_search`. For code, email, or meetings, use `code_search`, `gmail_search` / `outlook_search`, or `meeting_lookup` if they are in your tool list; if they are missing, `search` is the fallback.
 
 ## Parameter shape
 
@@ -61,9 +61,9 @@ search(query="quarterly planning", updated="past_2_weeks", exhaustive=true)
 
 After `search` returns candidates, fetch full content with `read_document` (see [read-document.md](read-document.md)) for the URLs you need to quote or analyze. For multi-source synthesis, see [synthesis.md](synthesis.md). Before presenting, apply [vetting.md](vetting.md).
 
-## Cross-tool filter style reference
+## Filter style by tool, if available
 
-Different Glean tools accept filters in different places. This matters: putting an inline filter in `search`'s `query` string won't work; putting a structured parameter in a code_search query string will silently fail.
+Use only the tools in your tool list. Different Glean tools accept filters in different places. This matters: putting an inline filter in `search`'s `query` string won't work; putting a structured parameter in a code_search query string will silently fail.
 
 | Tool | Filter style | Example |
 |------|-------------|---------|

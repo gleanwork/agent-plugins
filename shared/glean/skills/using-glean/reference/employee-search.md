@@ -12,7 +12,7 @@ Find people in the user's organization: names, teams, roles, reporting lines, hi
 
 **Don't** use for:
 - Document authorship (use `search` with `owner:` filter)
-- Code authorship (use `code_search` with `owner:` filter)
+- Code authorship (use `code_search` with an `owner:` filter if it is available)
 - "Who knows about X?" expertise — combine multiple signals; see [synthesis.md](synthesis.md)
 
 ## Parameters
@@ -50,7 +50,7 @@ employee_search(query="data scientist sortby:hire_date_descending")
 
 ## Typical follow-up
 
-For "who actually knows about X" rather than "who has the title", combine `employee_search` with `code_search` (code authorship) and `search` with `owner:` (doc authorship). See [synthesis.md](synthesis.md).
+For "who actually knows about X" rather than "who has the title", combine `employee_search` with `search` and `owner:` (doc authorship), and with `code_search` (code authorship) if it is available. See [synthesis.md](synthesis.md).
 
 ## Expertise vetting (for "who knows about X" queries)
 

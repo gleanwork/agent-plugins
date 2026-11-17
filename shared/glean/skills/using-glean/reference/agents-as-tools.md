@@ -8,7 +8,7 @@ The set of agent tools is **org-specific and dynamic**: it varies by deployment 
 
 Glean agent tools appear alongside the built-in ones in the active tool inventory. They typically:
 
-- Have names that aren't on the built-in list (`search`, `chat`, `read_document`, `code_search`, `employee_search`, `gmail_search`, `outlook_search`, `meeting_lookup`, `user_activity`, `memory`, `memory_schema`, `knowledge_graph_query`, `knowledge_graph_schema`)
+- Have names that aren't built-in Glean tools. The built-in set differs between deployments, so judge by the description, not by a fixed list of names
 - Carry org-specific names (e.g., `qbr_summarizer`, `customer_health_check`, `sales_brief`)
 - Have descriptions describing a workflow, not a primitive query operation
 

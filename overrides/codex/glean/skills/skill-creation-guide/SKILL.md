@@ -42,9 +42,10 @@ When the user asks what they should automate, analyze their work patterns first.
 Requires the Glean MCP tools. If they aren't visible, ask the user to set up
 Glean by prompting the harness (for example, `Set up Glean for me`).
 
-1. Gather context with Glean: `memory` (roles, responsibilities, active
-   projects), `user_activity` (past ~2 weeks), and `search` for process docs
-   (`"runbook OR checklist OR process owner:me"`).
+1. Gather context with Glean: `search` for process docs
+   (`"runbook OR checklist OR process owner:me"`), plus `memory` (roles,
+   responsibilities, active projects) and `user_activity` (past ~2 weeks) if
+   they are in your tool list.
 2. If subagent tools are available, delegate this analysis to a general
    subagent with the gathered context and recurrence/value tests. Otherwise
    analyze the patterns directly in the current task.
@@ -52,8 +53,7 @@ Glean by prompting the harness (for example, `Set up Glean for me`).
    rejected candidates with reasons. A few high-quality candidates beat many
    weak ones — "no automatable patterns" is a valid outcome.
 
-See `using-glean/reference/` for the param shape of `memory`, `user_activity`,
-and `search`.
+See `using-glean/reference/` for the param shape of each tool.
 
 ## Workflow B — Generate a skill
 

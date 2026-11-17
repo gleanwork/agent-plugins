@@ -1,6 +1,6 @@
 # `outlook_search` — Outlook / Microsoft 365 email
 
-Search the user's Outlook mailbox: messages, threads, attachments. The Microsoft 365 counterpart to `gmail_search`. Requires the user's org to be on M365.
+Search the user's Outlook mailbox: messages, threads, attachments. The Microsoft 365 counterpart to Gmail search ([gmail-search.md](gmail-search.md)). Requires the user's org to be on M365.
 
 ## When to use
 
@@ -9,8 +9,8 @@ Search the user's Outlook mailbox: messages, threads, attachments. The Microsoft
 - "Find that report I got from finance" — attachment lookup
 
 **Don't** use for:
-- Gmail / Google Workspace email — use `gmail_search`
-- Calendar invites as content — use `meeting_lookup`
+- Gmail / Google Workspace email — use `gmail_search` if it is available
+- Calendar invites as content — use `meeting_lookup` if it is available
 
 ## Picking the right tool
 
@@ -24,7 +24,7 @@ If the user has only one of `gmail_search` / `outlook_search` available in the a
 
 ## Inline filters
 
-The filter vocabulary largely parallels `gmail_search`:
+The filters mostly match the Gmail ones in [gmail-search.md](gmail-search.md):
 
 | Filter | Example | Meaning |
 |---|---|---|
@@ -34,7 +34,7 @@ The filter vocabulary largely parallels `gmail_search`:
 | `has:` | `has:attachment` | Attachment presence |
 | `after:` / `before:` | `after:2025-01-15` | YYYY-MM-DD |
 
-Differences from `gmail_search`:
+Differences from Gmail:
 - No `label:` taxonomy — Outlook uses folders. The standard folders (Inbox, Sent, Deleted) are searched by default.
 - No Gmail-specific `is:starred` / `is:snoozed`. `is:unread` and `is:read` typically work; verify against the live tool list before relying on others.
 

@@ -2,6 +2,8 @@
 
 When the user wants to understand a system, pattern, or piece of code that may live anywhere across the org's repositories.
 
+This workflow uses `code_search` when it is in your tool list. If it is missing, use `search` for each step and tell the user that code search isn't available.
+
 ## When this applies
 
 - Locating an unfamiliar system: "Where does the billing reconciliation code live?"

@@ -10,8 +10,8 @@ Search the user's Gmail inbox: messages, threads, attachments, labels. Requires 
 - "Unread important emails" — status filters
 
 **Don't** use for:
-- Outlook / Microsoft 365 email — use `outlook_search`
-- Calendar invites as content — use `meeting_lookup`
+- Outlook / Microsoft 365 email — use `outlook_search` if it is available
+- Calendar invites as content — use `meeting_lookup` if it is available
 - Slack DMs — use `search` with `app:slack`
 
 ## Parameters
