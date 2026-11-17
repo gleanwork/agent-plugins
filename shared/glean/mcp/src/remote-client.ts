@@ -12,8 +12,6 @@ import type { GleanOAuthClientProvider } from "./auth-provider.js";
 import { pluginVersionString } from "./version.js";
 import { negotiationMeta, recordPolicyFromResult } from "./policy/session.js";
 
-const GLEAN_PLUGIN = "GLEAN_PLUGIN";
-
 // The MCP SDK applies DEFAULT_REQUEST_TIMEOUT_MSEC (60s) to every request when
 // callTool is invoked without an explicit timeout. Downstream Glean tools can
 // legitimately take longer than 60s, so we override the per-call timeout.
@@ -28,55 +26,6 @@ export function remoteToolTimeoutMs(): number {
   return Number.isFinite(parsed) && parsed > 0
     ? parsed
     : DEFAULT_REMOTE_TOOL_TIMEOUT_MS;
-}
-
-function encodeVarint(value: number): number[] {
-  const bytes: number[] = [];
-  while (value > 0x7f) {
-    bytes.push((value & 0x7f) | 0x80);
-    value >>>= 7;
-  }
-  bytes.push(value);
-  return bytes;
-}
-
-function encodeStringField(fieldNumber: number, value: string): number[] {
-  if (!value) return [];
-  const encoded = new TextEncoder().encode(value);
-  const tag = (fieldNumber << 3) | 2;
-  return [tag, ...encodeVarint(encoded.length), ...encoded];
-}
-
-function encodeMessageField(fieldNumber: number, inner: number[]): number[] {
-  const tag = (fieldNumber << 3) | 2;
-  return [tag, ...encodeVarint(inner.length), ...inner];
-}
-
-// Hand-rolled proto encoder for mcp.GatewayRequestMetadata. We don't currently
-// have proto bindings in this repo, so the shape is hardcoded here. Cross-
-// language parity is enforced by tests/remote-client.test.ts (byte-equality
-// against the Go proto.Marshal output captured in scio's
-// proxy_tools_provider_test.go::TestPluginGatewayRequestMetadata_NoSession).
-//
-// Proto layout (keep in sync with go/core/api/mcp/api.proto):
-//   workflow_id      = field 1 (string)
-//   chat_session_id  = field 2 (string)
-//   source_info      = field 4 (core.SourceInfo)
-//     platform         = field 2 (string)
-//     client_initiator = field 3 (string)
-export function buildGatewayMetadataHeader(chatSessionId?: string): string {
-  const sourceInfo = [
-    ...encodeStringField(2, GLEAN_PLUGIN),
-    ...encodeStringField(3, GLEAN_PLUGIN),
-  ];
-
-  const message = [
-    ...encodeStringField(1, GLEAN_PLUGIN),
-    ...(chatSessionId ? encodeStringField(2, chatSessionId) : []),
-    ...encodeMessageField(4, sourceInfo),
-  ];
-
-  return Buffer.from(new Uint8Array(message)).toString("base64");
 }
 
 function loggingFetch(
@@ -150,16 +99,12 @@ function withConnectLock<T>(fn: () => Promise<T>): Promise<T> {
 function buildTransport(
   serverUrl: string,
   opts: RemoteClientOptions,
-  chatSessionId?: string,
 ): StreamableHTTPClientTransport {
   const parsedUrl = new URL(serverUrl);
-  // External clients must not send Glean internal-service headers; the edge WAF rejects them.
-  const headers: Record<string, string> = {
-    "X-Glean-Gateway-Request-Metadata": buildGatewayMetadataHeader(chatSessionId),
-  };
-
+  // Send no X-Glean-* request header. Glean ignored the gateway metadata
+  // header this client used to send, and Glean's edge can reject a request
+  // from outside that carries one of its internal headers.
   const transportOpts: ConstructorParameters<typeof StreamableHTTPClientTransport>[1] = {
-    requestInit: { headers },
     fetch: opts.fetch ?? loggingFetch,
   };
 
@@ -173,7 +118,6 @@ function buildTransport(
 export async function createRemoteClient(
   serverUrl: string,
   opts: RemoteClientOptions,
-  chatSessionId?: string,
   authRetry = false,
 ): Promise<Client> {
   const authProvider = opts.authProvider;
@@ -188,7 +132,7 @@ export async function createRemoteClient(
   //       Build a fresh transport for the exchange.
   if (authProvider?.pendingAuthCode) {
     const transportForAuth =
-      pendingTransport ?? buildTransport(serverUrl, opts, chatSessionId);
+      pendingTransport ?? buildTransport(serverUrl, opts);
     console.error("[auth] Auth code received, exchanging for tokens...");
     try {
       await withConnectLock(() =>
@@ -197,14 +141,14 @@ export async function createRemoteClient(
       authProvider.clearPendingAuth();
       pendingTransport = undefined;
       console.error("[auth] Token exchange complete, reconnecting...");
-      return createRemoteClient(serverUrl, opts, chatSessionId);
+      return createRemoteClient(serverUrl, opts);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[auth] Code exchange failed: ${msg} — discarding stale auth state`);
       authProvider.clearPendingAuth();
       pendingTransport = undefined;
       await authProvider.invalidateCredentials("all");
-      return createRemoteClient(serverUrl, opts, chatSessionId);
+      return createRemoteClient(serverUrl, opts);
     }
   }
 
@@ -246,7 +190,7 @@ export async function createRemoteClient(
   // Snapshot to detect a sibling's refresh between connect and failure.
   const accessTokenAtConnect = authProvider?.tokens()?.access_token;
 
-  const transport = buildTransport(serverUrl, opts, chatSessionId);
+  const transport = buildTransport(serverUrl, opts);
 
   try {
     await withConnectLock(() => client.connect(transport));
@@ -266,7 +210,7 @@ export async function createRemoteClient(
           "[auth] Auth failed but a newer token is on disk " +
             "(sibling refresh) — retrying once",
         );
-        return createRemoteClient(serverUrl, opts, chatSessionId, true);
+        return createRemoteClient(serverUrl, opts, true);
       }
       if (authProvider.authorizationUrl) {
         pendingTransport = transport;
@@ -284,7 +228,7 @@ export async function createRemoteClient(
       console.error(
         "[auth] Refresh failed but a sibling refreshed — retrying with its token",
       );
-      return createRemoteClient(serverUrl, opts, chatSessionId, true);
+      return createRemoteClient(serverUrl, opts, true);
     }
     throw error;
   }
