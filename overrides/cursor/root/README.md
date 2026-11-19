@@ -8,19 +8,12 @@
 Official Glean plugins for [Cursor](https://cursor.com) — enterprise knowledge,
 search, code exploration, and people discovery, right in your editor.
 
-## What's new in v3.0.0
-
-- The **`glean`** plugin is refreshed with the latest consolidated skills and
-  agents (search, code exploration, people, meetings, onboarding, productivity).
-  Your existing `glean` install updates in place — no migration needed.
-- A new **`glean-dev-docs`** plugin searches Glean's public developer
-  documentation (APIs, SDKs, MCP) — install it if you build *with* Glean.
-
 ## Install
 
 Add the **`gleanwork/cursor-plugins`** marketplace in Cursor, then install the
 **`glean`** plugin (and **`glean-dev-docs`** if you build with Glean). Once
-installed, ask Cursor to "set up Glean" and complete the browser OAuth flow.
+installed, ask Cursor to `Set up Glean for me`, enter your work email, and
+finish signing in in your browser.
 
 ## Plugins
 
@@ -28,6 +21,12 @@ installed, ask Cursor to "set up Glean" and complete the browser OAuth flow.
 |--------|-------------|
 | **[glean](glean)** | Enterprise knowledge — search docs/Slack/email, cross-repo code exploration, people & experts, meetings, onboarding, productivity. |
 | **[glean-dev-docs](glean-dev-docs)** | Search Glean's public developer documentation — APIs, SDKs, MCP, and integration guides. |
+
+## Requirements
+
+- [Cursor](https://cursor.com) (latest version)
+- [Node.js](https://nodejs.org) 22 or later
+- A Glean account with MCP access (for the `glean` plugin)
 
 ## License
 

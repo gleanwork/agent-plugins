@@ -1,6 +1,6 @@
 # Glean Developer Docs
 
-Search the public [Glean developer documentation](https://docs.glean.com) — APIs, SDKs,
+Search the public [Glean developer documentation](https://developers.glean.com) — APIs, SDKs,
 MCP, authentication, indexing, and integration guides for building *with* Glean.
 
 This is a separate, focused plugin for people building on the Glean platform. For
@@ -31,7 +31,7 @@ It searches the public developer documentation and returns cited answers.
 
 ## Support
 
-- [Glean Developer Documentation](https://docs.glean.com)
+- [Glean Developer Documentation](https://developers.glean.com)
 - [GitHub Issues](https://github.com/gleanwork/agent-plugins/issues)
 
 ## License

@@ -17,8 +17,8 @@ codex plugin add glean@glean-codex-plugins
 codex plugin add glean-dev-docs@glean-codex-plugins
 ```
 
-Start Codex and prompt the harness to set up Glean, for example: `Set up Glean
-for me`. Complete the browser OAuth flow when prompted.
+Start Codex and ask: `Set up Glean for me`. Enter your work email when asked,
+then finish signing in in your browser.
 
 The **Glean developer docs** plugin uses a separate public MCP server. If you
 installed that plugin, add it before starting a new Codex task:
@@ -36,6 +36,7 @@ Then start a new Codex task so the bundled skills and MCP tools are available.
 ## Requirements
 
 - [Codex](https://developers.openai.com/codex) with plugin support
+- [Node.js](https://nodejs.org) 22 or later
 - A Glean account with MCP access (for the `glean` plugin)
 
 ## Support
