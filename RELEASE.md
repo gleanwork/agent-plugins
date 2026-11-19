@@ -103,10 +103,14 @@ Publishing the GitHub Release triggers
    `gleanwork/codex-plugins`), on a machine-owned `pluginpack/sync-<target>`
    branch labeled `pluginpack-sync`.
 3. Squash-merges each sync PR. Users get the release once these merge.
+4. Tags the merged commit in each output repo and creates a GitHub Release
+   there with the same version and notes, for example `Release 3.6.1`. If a
+   release for that tag already exists, it is left alone.
 
 The merge step needs `pluginpack-sync` to be allowed to bypass pull request
 reviews in each output repo. If a merge fails, the job says which PR to
-merge by hand.
+merge by hand. The job then stops before step 4. After you merge the PR,
+re-run the release's sync (below) to create the output repo releases.
 
 The sync PRs are regenerated and force-pushed on every sync — **don't push
 to them by hand or hand-edit their content**.
