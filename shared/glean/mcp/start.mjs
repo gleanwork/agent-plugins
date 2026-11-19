@@ -33,7 +33,7 @@ process.env.PLUGIN_DATA_DIR = pluginDataDir;
 let skillsBaseDir = path.join(pluginDataDir, "glean-skills-cache");
 
 // Opt-in: when USE_CLAUDE_PROJECT_DIR=1, route the skills cache under the launch
-// project's .claude/tmp/ so the glean_run skill's allowed-tools Read glob can
+// project's .claude/tmp/ so the glean-run skill's allowed-tools Read glob can
 // match cache files via a path anchored to the project root. projectDir is the
 // git repo root for the launch cwd, falling back to the launch cwd when it is
 // not inside a git repo (or git is unavailable).
