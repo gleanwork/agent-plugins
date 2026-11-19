@@ -36,7 +36,8 @@ export default defineConfig({
         },
         "glean-dev-docs": {
           source: "shared/glean-dev-docs",
-          include: ["skills", "static"],
+          overrides: "overrides/claude/glean-dev-docs",
+          include: ["skills", "assets", "static"],
           displayName: "Glean Developer Docs",
           description:
             "Search the public Glean developer documentation — APIs, SDKs, MCP, and integration guides for building with Glean.",
