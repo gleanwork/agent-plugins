@@ -66,7 +66,6 @@ describe("createRemoteClient sibling-refresh retry", () => {
     const client = await createRemoteClient(
       serverUrl,
       { authProvider: provider },
-      "sess-1",
     );
 
     expect(client).toBeTruthy();

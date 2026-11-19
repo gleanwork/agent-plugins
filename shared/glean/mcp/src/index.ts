@@ -39,7 +39,6 @@ import {
   fetchAllowedRemoteTools,
   type DispatchContext,
 } from "./tools/remote-passthrough.js";
-import { resolveSessionId } from "./session-id.js";
 import { serverDataDir } from "./data-dir.js";
 import { resolveServerUrlFromEmail } from "./config-search.js";
 import { pluginVersionString } from "./version.js";
@@ -376,7 +375,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     remoteClient = await createRemoteClient(
       serverUrl,
       await getRemoteClientOpts(),
-      `tools-list-${process.pid}`,
     );
   } catch (err) {
     // Auth expired mid-session, network blip, schema parse error — serve
@@ -458,7 +456,6 @@ async function connectWithSignIn(
       const client = await createRemoteClient(
         serverUrl,
         await getRemoteClientOpts(),
-        `setup-${process.pid}`,
       );
       return { ok: true, client };
     } catch (err) {
@@ -495,7 +492,6 @@ async function connectWithSignIn(
       const client = await createRemoteClient(
         serverUrl,
         await getRemoteClientOpts(),
-        `setup-${process.pid}`,
       );
       // Unexpectedly connected without needing auth — done.
       return { ok: true, client };
@@ -537,7 +533,6 @@ async function connectWithSignIn(
       const client = await createRemoteClient(
         serverUrl,
         await getRemoteClientOpts(),
-        `setup-${process.pid}`,
       );
       return { ok: true, client };
     } catch (err) {
@@ -678,8 +673,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      const sessionId = resolveSessionId();
-
       const skillsBaseDir = resolveSkillsBaseDir();
 
       let remoteClient;
@@ -687,7 +680,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         remoteClient = await createRemoteClient(
           serverUrl,
           await getRemoteClientOpts(),
-          sessionId,
         );
       } catch (err) {
         if (err instanceof AuthRequiredError) {
@@ -744,14 +736,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      const sessionId = resolveSessionId();
-
       let remoteClient;
       try {
         remoteClient = await createRemoteClient(
           serverUrl,
           await getRemoteClientOpts(),
-          sessionId,
         );
       } catch (err) {
         if (err instanceof AuthRequiredError) {
