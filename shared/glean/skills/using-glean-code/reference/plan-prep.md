@@ -22,7 +22,7 @@ When the user is about to enter plan mode for architectural or strategic work, g
    ```
    Note proposals that were *rejected* — they record constraints worth respecting.
 
-2. **Code patterns & implementations.** Use `code_search` for similar solutions across the org:
+2. **Code patterns & implementations.** If `code_search` is available, use it for similar solutions across the org; otherwise use `search`:
    ```
    code_search(query="[similar component or pattern]")
    code_search(query="[interface or library being affected]")

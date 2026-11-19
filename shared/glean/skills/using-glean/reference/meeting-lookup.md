@@ -12,7 +12,7 @@ Find calendar meetings and (optionally) extract their transcripts. Scope: the us
 
 **Don't** use for:
 - Documents *attached* to meetings (the linked docs are reachable via `search`)
-- Email threads about meetings (use `gmail_search` / `outlook_search`)
+- Email threads about meetings (use `gmail_search` / `outlook_search` if available)
 
 ## Parameters
 
@@ -51,7 +51,7 @@ meeting_lookup(query="design review", extract_transcript=true, exhaustive=true)
 
 ## Typical follow-up
 
-Action items from a transcript usually need follow-on `search` (the doc they reference) or `gmail_search` (the email thread). For multi-source synthesis, see [synthesis.md](synthesis.md).
+Action items from a transcript usually need follow-on `search` (the doc they reference) or `gmail_search` (the email thread) if it is available. For multi-source synthesis, see [synthesis.md](synthesis.md).
 
 ## When to extract transcripts
 

@@ -44,9 +44,9 @@ Filter aggressively for relevant, current information.
 | Research Need | Glean Tool |
 |---------------|-----------|
 | Find design docs, RFCs, architecture | `search` |
-| Find similar code implementations | `code_search` |
-| Find code owners and stakeholders | `code_search` + `employee_search` |
-| Find related/dependent systems | `code_search` |
+| Find similar code implementations | `code_search` if available; otherwise `search` |
+| Find code owners and stakeholders | `employee_search`, plus `code_search` if available |
+| Find related/dependent systems | `code_search` if available; otherwise `search` |
 | Read full document content | `read_document` |
 
 ## Workflow

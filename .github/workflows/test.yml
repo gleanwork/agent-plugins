@@ -35,6 +35,12 @@ jobs:
       - name: Check release version targets
         run: npm run check:release-version
 
+      - name: Check how skills name Glean tools
+        run: npm run check:skill-tools
+
+      - name: Test repo scripts
+        run: npm run test:scripts
+
       - name: Typecheck server bundle
         run: npm run typecheck:bundle
 

@@ -7,6 +7,8 @@ description: Search and analyze internal source code across the organization's r
 
 Glean indexes source code across the organization's connected repositories. Local tools (`Grep`, `Glob`, `Read`) see only the current repo; this skill is for everything else.
 
+This skill needs `code_search`. If `code_search` is not in your tool list, use `search` instead, and tell the user that the results come from document search, not code search.
+
 ## When to reach for this
 
 - **Finding the system** — "Where does our payments code live?"

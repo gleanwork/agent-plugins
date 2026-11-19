@@ -20,7 +20,7 @@ The two tools are paired:
 **Don't** use for:
 - Other people's memory (memory is calling-user only)
 - General company knowledge (use `search` / `chat`)
-- Real-time activity (use `user_activity`)
+- Real-time activity (use `user_activity` if it is available)
 
 ## Schema-then-act pattern
 
@@ -98,4 +98,4 @@ A successful `add`/`update` returns the stored entry **including its `id`** (plu
 
 ## Typical follow-up
 
-For status reports / weekly summaries, pair `memory` (what the user *says* they work on) with `user_activity` ([user-activity.md](user-activity.md), what they actually touched) and surface any drift.
+For status reports / weekly summaries, pair `memory` (what the user *says* they work on) with `user_activity` ([user-activity.md](user-activity.md), what they actually touched) if it is available, and surface any drift.

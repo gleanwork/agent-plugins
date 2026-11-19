@@ -12,15 +12,17 @@ Some questions can't be answered by a single Glean tool. Use this file when the 
 
 ## Choose tools by information type
 
+Use only the tools in your tool list. When a tool is missing, use the fallback.
+
 | What you need | Reach for |
 |---|---|
 | Authoritative doc (RFC, policy, spec) | `search` |
 | Synthesized overview across many sources | `chat` |
-| Recent discussion / decisions | `meeting_lookup` |
+| Recent discussion / decisions | `meeting_lookup` if available; otherwise `search` for meeting notes |
 | Org structure, role, reporting | `employee_search` |
-| Code-level truth (what's actually built) | `code_search` |
-| User's own context / personalization | `memory`, `user_activity` |
-| Structured entity / relationship | `knowledge_graph_query` |
+| Code-level truth (what's actually built) | `code_search` if available; otherwise `search` |
+| User's own context / personalization | `memory` and `user_activity` if available; otherwise `search` with `from="me"` |
+| Structured entity / relationship | `knowledge_graph_query` if available; otherwise `search` and `employee_search` |
 
 ## Patterns
 
@@ -36,22 +38,22 @@ Some questions can't be answered by a single Glean tool. Use this file when the 
 Title alone is weak signal. Combine:
 
 1. `employee_search` — who has the role
-2. `code_search` with `owner:` — who has been writing code on it
+2. `code_search` with `owner:`, if available — who has been writing code on it
 3. `search` with `owner:` — who has been authoring docs on it
 4. Rank by how many signals overlap. People with multiple signals are the real experts; single-signal hits are weaker.
 
 ### "What's the status of project Y?"
 
 1. `chat` — current-status summary
-2. `meeting_lookup` — recent decisions
+2. `meeting_lookup`, if available — recent decisions
 3. `search` with `app:jira` or `app:notion` — tracking docs
 4. Recency-weight: a 2-day-old meeting beats a 6-month-old wiki page.
 
 ### "How do we do X?"
 
 1. `search` — process docs
-2. `code_search` — what the code actually does
-3. `meeting_lookup` — recent changes to the process
+2. `code_search`, if available — what the code actually does
+3. `meeting_lookup`, if available — recent changes to the process
 4. Reconcile: doc + code + recent updates. Flag any drift.
 
 ## Reconciling conflicts
