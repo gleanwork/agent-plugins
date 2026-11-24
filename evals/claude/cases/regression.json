@@ -1,0 +1,30 @@
+{
+  "name": "regression",
+  "description": "Skills that do not change. These show whether a different server changes how they behave.",
+  "cases": [
+    {
+      "id": "search-skill-explicit",
+      "description": "The user runs the search skill.",
+      "input": "/glean:search signing key rotation policy",
+      "assertions": {
+        "containsText": ["75 days"],
+        "toolsTriggered": {
+          "calls": [{ "name": "search", "required": true }],
+          "order": "any"
+        }
+      }
+    },
+    {
+      "id": "company-question-natural",
+      "description": "A company question without naming a skill.",
+      "input": "How often do we rotate our release signing keys? Check our internal docs.",
+      "assertions": {
+        "containsText": ["75"],
+        "toolsTriggered": {
+          "calls": [{ "name": "search", "required": true }],
+          "order": "any"
+        }
+      }
+    }
+  ]
+}
