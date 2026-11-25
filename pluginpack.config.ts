@@ -33,6 +33,19 @@ export default defineConfig({
           overrides: "overrides/claude/glean",
           displayName: "Glean",
           description: gleanPluginDescription,
+          manifest: {
+            privacyPolicyUrl: "https://www.glean.com/privacy",
+            userConfig: {
+              server_url: {
+                type: "string",
+                title: "Glean MCP server URL",
+                description:
+                  "The URL of your Glean MCP server, for example https://acme-be.glean.com/mcp/default. Ask your Glean admin if you do not know it.",
+                required: true,
+                sensitive: false,
+              },
+            },
+          },
         },
         "glean-dev-docs": {
           source: "shared/glean-dev-docs",
