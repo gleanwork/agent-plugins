@@ -151,6 +151,13 @@ const shapes = {
     writes: "unguarded",
     datasets: ["discovery.json", "regression.json"],
   },
+  // Claude Code connected to the plugin's own endpoint with no relay: what a
+  // user has after an update that keeps their saved server URL.
+  proxy: {
+    server: stub("proxy"),
+    writes: "unguarded",
+    datasets: ["discovery.json", "regression.json"],
+  },
   // A Glean server whose admin has not enabled skill discovery.
   "no-discovery": { server: stub("no-discovery"), datasets: ["no-discovery.json"] },
   // No Glean server: the URL is unset or the user has not signed in.

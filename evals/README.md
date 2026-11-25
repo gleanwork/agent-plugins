@@ -35,6 +35,7 @@ runs both variants against one shape:
 | `relay` | `find_skills_and_tools`, `run_tool`, `setup`, `search`, `read_document` | The plugin's local relay, from the baseline build, in front of Glean. |
 | `relay-first-run` | `find_skills_and_tools`, `run_tool`, `setup` | The same relay straight after install, with no server URL and no token. |
 | `direct` | `find_skills_and_tools`, `read_skill_files`, `run_tool`, `search`, `read_document` | Claude Code connected to a Glean server that offers skill discovery. |
+| `proxy` | `find_skills_and_tools`, `run_tool`, `get_tool_approval`, `set_tool_approval`, `search`, `read_document` | Claude Code connected to the plugin's own endpoint with no relay. The model can see the tool that saves Always Allow. |
 | `no-discovery` | `search`, `read_document` | A Glean server whose admin has not enabled skill discovery. |
 | `no-glean` | one unrelated tool | No Glean server: the URL is unset, or the user has not signed in. |
 
@@ -73,6 +74,7 @@ cd evals
 npx mst run --config claude/.build/relay.eval.json
 npx mst run --config claude/.build/relay-first-run.eval.json
 npx mst run --config claude/.build/direct.eval.json
+npx mst run --config claude/.build/proxy.eval.json
 npx mst run --config claude/.build/no-discovery.eval.json
 npx mst run --config claude/.build/no-glean.eval.json
 ```

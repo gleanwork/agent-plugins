@@ -27,7 +27,7 @@ import {
   SKILLS,
 } from "./catalog.mjs";
 
-export const SHAPES = ["direct", "no-discovery", "gateway", "unrelated"];
+export const SHAPES = ["direct", "no-discovery", "gateway", "proxy", "unrelated"];
 
 // The three descriptions below are the ones a Glean server sends, word for
 // word, because the glean_run skill tells the model to follow them.
@@ -201,6 +201,29 @@ const TOOLS = {
   ],
 };
 
+// What a client sees when it connects to the plugin's endpoint with no relay in
+// between: the gateway list, plus the tool that saves Always Allow. The relay
+// keeps that tool from the model; a direct client lists it.
+TOOLS.proxy = [
+  ...TOOLS.gateway.slice(0, 3),
+  {
+    name: "set_tool_approval",
+    description:
+      "Save the user's approval preference for a tool. ALWAYS_ALLOWED always allows the tool; UNSET clears any stored preference.",
+    annotations: { readOnlyHint: false },
+    inputSchema: {
+      type: "object",
+      properties: {
+        server_id: { type: "string" },
+        tool_name: { type: "string" },
+        value: { type: "string", enum: ["ALWAYS_ALLOWED", "UNSET"] },
+      },
+      required: ["server_id", "tool_name"],
+    },
+  },
+  ...TOOLS.gateway.slice(3),
+];
+
 const text = (value) => ({ content: [{ type: "text", text: value }] });
 const failure = (value) => ({ ...text(value), isError: true });
 
@@ -227,7 +250,7 @@ function findSkills(shape, args) {
   const queries = Array.isArray(args.queries) ? args.queries : [];
   if (queries.length === 0) return failure("queries must list at least one entry.");
   const skills = matchingSkills(queries);
-  if (shape === "gateway") {
+  if (shape === "gateway" || shape === "proxy") {
     return text(
       JSON.stringify({
         skills: Object.fromEntries(skills.map((s) => [s.name, s.files])),
@@ -328,6 +351,10 @@ function callTool(shape, name, args) {
       return runTool(args);
     case "get_tool_approval":
       return text(JSON.stringify({ value: "ALWAYS_ALLOWED" }));
+    case "set_tool_approval":
+      return text(
+        `Set approval preference for tool ${JSON.stringify(args.tool_name)} to ${args.value ?? "UNSET"}.`,
+      );
     case "search":
       return search(args);
     case "read_document":

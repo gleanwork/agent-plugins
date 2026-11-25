@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const results = path.join(here, "..", ".mcp-test-results");
 const builds = JSON.parse(fs.readFileSync(path.join(here, ".build", "builds.json"), "utf8"));
-const SHAPES = ["relay", "relay-first-run", "direct", "no-discovery", "no-glean"];
+const SHAPES = ["relay", "relay-first-run", "direct", "proxy", "no-discovery", "no-glean"];
 const VARIANTS = ["baseline", "candidate"];
 const NAMES_SETUP = /`setup`|[Ss]et up Glean for me/;
 
