@@ -1,0 +1,54 @@
+{
+  "name": "no-glean",
+  "description": "No Glean server is connected: the plugin has no server URL, or the user has not signed in. The answer should name where to fix that in Claude Code.",
+  "cases": [
+    {
+      "id": "ng-jira-status-explicit",
+      "description": "The user runs glean_run with no Glean tools in the tool list.",
+      "input": "/glean:glean_run What is the status of DEMO-4821 in Jira?",
+      "assertions": {
+        "matchesPattern": ["(/plugin|/mcp)"]
+      }
+    },
+    {
+      "id": "ng-jira-status-natural",
+      "description": "The same task, asked for by name of the product and not of the skill.",
+      "input": "Use Glean to check the status of DEMO-4821 in Jira.",
+      "assertions": {
+        "matchesPattern": ["(/plugin|/mcp)"]
+      }
+    },
+    {
+      "id": "ng-handoff-explicit",
+      "description": "The user runs project-handoff, which needs Glean tools to research the project.",
+      "input": "/glean:project-handoff the Atlas billing migration",
+      "assertions": {
+        "matchesPattern": ["(/plugin|/mcp)"]
+      }
+    },
+    {
+      "id": "ng-handoff-natural",
+      "description": "The same task, asked for in plain words.",
+      "input": "I change teams next week. Generate a handoff doc for the Atlas billing migration so that someone else can take it over.",
+      "assertions": {
+        "matchesPattern": ["(/plugin|/mcp)"]
+      }
+    },
+    {
+      "id": "ng-automation-explicit",
+      "description": "The user runs skill-creation-guide and asks what to automate, which needs Glean tools to read their recent work.",
+      "input": "/glean:skill-creation-guide What should I automate? Look at my recent work.",
+      "assertions": {
+        "matchesPattern": ["(/plugin|/mcp)"]
+      }
+    },
+    {
+      "id": "ng-automation-natural",
+      "description": "The same task, asked for in plain words.",
+      "input": "Look at what I worked on in the last two weeks and tell me which of my repeated tasks I should turn into a skill.",
+      "assertions": {
+        "matchesPattern": ["(/plugin|/mcp)"]
+      }
+    }
+  ]
+}

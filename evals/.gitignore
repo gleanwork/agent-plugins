@@ -1,0 +1,4 @@
+# Built by claude/setup.mjs: config directories, the baseline checkout and eval configs.
+.build/
+# Runs. Transcripts stay local; summary numbers go in results/.
+.mcp-test-results/

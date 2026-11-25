@@ -1,0 +1,30 @@
+{
+  "name": "first-run",
+  "description": "The relay straight after install: it has no server URL and no token. Its `setup` tool asks for the user's work email, so the answer should ask for it.",
+  "cases": [
+    {
+      "id": "fr-jira-status-explicit",
+      "description": "The user runs glean_run before they have set up Glean.",
+      "input": "/glean:glean_run What is the status of DEMO-4821 in Jira?",
+      "assertions": {
+        "matchesPattern": ["[Ee]mail"],
+        "toolsTriggered": {
+          "calls": [{ "name": "setup", "required": true }],
+          "order": "any"
+        }
+      }
+    },
+    {
+      "id": "fr-jira-status-natural",
+      "description": "The same task, asked for by name of the product and not of the skill.",
+      "input": "Use Glean to check the status of DEMO-4821 in Jira.",
+      "assertions": {
+        "matchesPattern": ["[Ee]mail"],
+        "toolsTriggered": {
+          "calls": [{ "name": "setup", "required": true }],
+          "order": "any"
+        }
+      }
+    }
+  ]
+}

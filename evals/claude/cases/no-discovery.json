@@ -1,0 +1,26 @@
+{
+  "name": "no-discovery",
+  "description": "The Glean server offers search and read_document, and no skill discovery. The skill should do what it can with those and tell the user what it could not do.",
+  "cases": [
+    {
+      "id": "nd-jira-status-explicit",
+      "description": "Search holds the answer, so the task can still be done.",
+      "input": "/glean:glean_run What is the status of DEMO-4821 in Jira?",
+      "assertions": {
+        "containsText": ["In Review"],
+        "toolsTriggered": {
+          "calls": [{ "name": "search", "required": true }],
+          "order": "any"
+        }
+      }
+    },
+    {
+      "id": "nd-calendar-explicit",
+      "description": "No tool on this server can do the task. The user cannot fix that, so the answer should say that a Glean admin can.",
+      "input": "/glean:glean_run What meetings does Priya Raman have on 14 March 2026?",
+      "assertions": {
+        "matchesPattern": ["[Aa]dmin"]
+      }
+    }
+  ]
+}

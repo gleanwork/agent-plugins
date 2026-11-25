@@ -1,0 +1,66 @@
+{
+  "name": "discovery",
+  "description": "Tasks in a connected app, on a server that offers skill discovery. Each answer is only in the stub's data, so the model cannot pass by guessing.",
+  "cases": [
+    {
+      "id": "jira-status-explicit",
+      "description": "The user runs glean_run. The skill should discover, read the tool definition, then run the tool.",
+      "input": "/glean:glean_run What is the status of DEMO-4821 in Jira?",
+      "assertions": {
+        "containsText": ["In Review"],
+        "toolsTriggered": {
+          "calls": [
+            { "name": "find_skills_and_tools", "required": true },
+            { "name": "run_tool", "required": true }
+          ],
+          "order": "any"
+        }
+      }
+    },
+    {
+      "id": "jira-assignee-natural",
+      "description": "The same kind of task without naming the skill. Search also holds the answer, so only the answer is checked.",
+      "input": "Who is DEMO-4821 assigned to in Jira, and what is its status?",
+      "assertions": {
+        "containsText": ["Priya", "In Review"]
+      }
+    },
+    {
+      "id": "calendar-explicit",
+      "description": "The user runs glean_run for a task only a discovered tool can do.",
+      "input": "/glean:glean_run What meetings does Priya Raman have on 14 March 2026?",
+      "assertions": {
+        "containsText": ["Northwind"],
+        "toolsTriggered": {
+          "calls": [
+            { "name": "find_skills_and_tools", "required": true },
+            { "name": "run_tool", "required": true }
+          ],
+          "order": "any"
+        }
+      }
+    },
+    {
+      "id": "calendar-natural",
+      "description": "A task only a discovered tool can do, without naming the skill.",
+      "input": "What is on Priya Raman's calendar on 14 March 2026?",
+      "assertions": {
+        "containsText": ["Northwind"]
+      }
+    },
+    {
+      "id": "no-match-explicit",
+      "description": "Discovery finds nothing that fits. The skill should say so and not run a tool.",
+      "input": "/glean:glean_run Book me a flight to Denver in Concur",
+      "assertions": {
+        "matchesPattern": [
+          "([Nn]o (matching|relevant|suitable|skill|tool)|[Cc]ouldn.t|[Cc]ould not|[Cc]an.t|[Cc]annot|[Uu]nable|[Dd]idn.t find|[Nn]ot (find|available|able)|[Nn]othing)"
+        ],
+        "toolsTriggered": {
+          "calls": [{ "name": "find_skills_and_tools", "required": true }],
+          "order": "any"
+        }
+      }
+    }
+  ]
+}
