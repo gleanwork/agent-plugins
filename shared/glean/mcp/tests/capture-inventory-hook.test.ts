@@ -14,10 +14,10 @@ import { fileURLToPath } from "node:url";
 const WINDOWS = process.platform === "win32";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const HOOK_SOURCE = path.resolve(
-  here,
-  "../../../../overrides/claude/glean/hooks/capture-inventory.mjs",
-);
+// The Claude package no longer ships this hook: it connects to Glean directly and has no
+// local server to read the inventory. The hook stays here with the server code that
+// reads its output, until that code goes too.
+const HOOK_SOURCE = path.resolve(here, "claude-relay-hooks/capture-inventory.mjs");
 
 interface Run {
   cache: {

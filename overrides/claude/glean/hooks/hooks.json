@@ -2,24 +2,12 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume|clear",
+        "matcher": "startup|resume",
         "hooks": [
           {
             "type": "command",
-            "async": true,
-            "timeout": 90,
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/capture-inventory.mjs\""
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "mcp__.*glean.*run_tool",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/record-permission-mode.mjs\""
+            "timeout": 60,
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/check-setup.mjs\""
           }
         ]
       }

@@ -6,10 +6,10 @@ import os from "node:os";
 import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const HOOK = path.resolve(
-  here,
-  "../../../../overrides/claude/glean/hooks/record-permission-mode.mjs",
-);
+// The Claude package no longer ships this hook: it connects to Glean directly and has no
+// local server to read the marker. The hook stays here with the server code that reads
+// its output, until that code goes too.
+const HOOK = path.resolve(here, "claude-relay-hooks/record-permission-mode.mjs");
 
 interface HookResult {
   out: string;
